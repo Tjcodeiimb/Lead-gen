@@ -1,0 +1,13 @@
+import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
+  schema: "./src/db/schema.ts",
+  out: "./drizzle",
+  dialect: "postgresql",
+  dbCredentials: {
+    // Use the DIRECT (session) connection string from Supabase for migrations.
+    url: process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL ?? "",
+  },
+  strict: true,
+  verbose: true,
+});
