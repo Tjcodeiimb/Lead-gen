@@ -13,6 +13,9 @@ const LABELS: Record<string, string> = {
   C5_budget_proxies: "Budget proxies", C6_consumer_relevance: "Consumer relevance", C7_finops_need: "Finance / ops need", C8_reachability: "Reachability",
 };
 
+// Research + scoring + drafting can take 1-3 minutes. Vercel allows up to 300s on Hobby and 800s on Pro.
+export const maxDuration = 300;
+
 export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
   const [p] = await db.select().from(people).where(eq(people.id, id));

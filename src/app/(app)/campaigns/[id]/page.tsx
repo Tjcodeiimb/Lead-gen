@@ -8,6 +8,9 @@ import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { GenerateBriefButton, StatusButtons } from "./controls";
 import { Upload } from "lucide-react";
 
+// Research + scoring + drafting can take 1-3 minutes. Vercel allows up to 300s on Hobby and 800s on Pro.
+export const maxDuration = 300;
+
 export default async function CampaignDetail({ params, searchParams }: PageProps<"/campaigns/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
