@@ -12,7 +12,16 @@ function connect(): Db {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local and fill it in (SETUP.md step 2).");
   // Supabase's transaction pooler (port 6543) does not support prepared statements.
-  const client = postgres(url, { prepare: false, max: 5 });
+  const client = postgres(url, {
+    prepare: false,
+    max: 5,
+    // Close idle connections before routers/NAT silently drop them (that caused 60s hangs + ECONNRESET).
+    idle_timeout: 20,
+    // Recycle every connection after 5 minutes regardless.
+    max_lifetime: 60 * 5,
+    // Fail fast instead of hanging if the database is unreachable.
+    connect_timeout: 10,
+  });
   return drizzle(client, { schema });
 }
 
