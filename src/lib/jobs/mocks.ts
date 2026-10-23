@@ -75,13 +75,17 @@ export function mockEvidence(company: string, domain?: string | null) {
 }
 
 export function mockCopy(lead: { firstName: string; company: string; market: string }): CopyPackage {
+  const m = lead.market.toLowerCase();
   return {
     problem_hypothesis: `If ${lead.company} is entering ${lead.market} with its home-market trust signals, month-three conversion is the likely constraint.`,
     email: {
-      subject: `${lead.market.toLowerCase()} launch, one data point`,
-      body: `Hi ${lead.firstName},\n\nSaw ${lead.company} is now live in ${lead.market}. One pattern we see in that corridor: brands that win redesign trust signals for non-diaspora shoppers; the ones that stall copy the home playbook.\n\nWe run a four-week, founder-led Market Entry Sprint that gives you the city and channel call, a consumer-trust plan and a 24-month P&L your board can challenge. Fixed fee.\n\nWould a 20-minute call be useful? If not, the two-page pulse on your category in ${lead.market} is yours either way.\n\nShardul Singh\nFounder, UpForge Consulting\n\nIf this isn't relevant, reply 'no' and I won't contact you again.`,
+      subject: `${m} launch`,
+      body: `Hi ${lead.firstName},\n\nSaw ${lead.company} went live in ${lead.market} this year. I run UpForge, a small team that researches how consumer brands win shoppers in new markets. In ${lead.market}, the brands that stall by month three usually kept their home-market trust signals, and the ones that grow rebuilt them for non-diaspora shoppers. Want the two-page version for your category?\n\nShardul Singh\nFounder, UpForge Consulting\n\nIf this isn't relevant, reply 'no' and I won't contact you again.`,
     },
-    follow_up: { subject: `re: ${lead.market.toLowerCase()} launch, one data point`, body: `${lead.firstName}, one more thought: the decisions before a country-manager hire (city, channel, partner, price) are the hardest to reverse later. Happy to stress-test ${lead.company}'s current case in 20 minutes.` },
+    follow_up: {
+      subject: `re: ${m} launch`,
+      body: `${lead.firstName}, one more data point: the decisions before a country-manager hire (city, channel, partner, price) are the hardest to reverse later. Happy to send the pulse either way.`,
+    },
     linkedin_note: `Hi ${lead.firstName}, saw ${lead.company}'s ${lead.market} move. I research how brands build trust with new shoppers there. Happy to share what we're seeing. Would be good to connect.`,
     facts_used: [{ fact: `${lead.company} launched in ${lead.market}`, evidence_id: "E2" }],
     risk_flags: ["Prices omitted: offers.md not yet confirmed."],

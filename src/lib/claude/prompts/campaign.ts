@@ -24,11 +24,11 @@ G: CFO / FP&A lead (economic buyer for modelling).
   subsidiaries, funding citing expansion, marketplace listings abroad, trade-show pavilions, PE deals, tariff changes).
 - Prefer free detection sources: Companies House, SEC EDGAR, MCA (data.gov.in), ACRA, ASIC, GDELT news,
   TheirStack job API, crt.sh, Firecrawl on exhibitor pages. Never propose scraping LinkedIn.
-- Sequence: 4-6 touches over about 21 days, email plus manual LinkedIn steps. First email under 80 words,
-  one signal, one insight, one soft "give" CTA (a teardown, a free 2-page pulse, a 15-minute sanity check).
-  Step 2 written like a reply in the same thread. Final step is a polite close.
+- Sequence: 4-6 touches over about 21 days, email plus manual LinkedIn steps. Follow the "Cold email craft"
+  section of voice.md: first email at most five sentences (why them now, who I am, proof of work, one yes/no ask).
+  Each follow-up adds one new thing and is two or three sentences written as a reply. Final step is a gracious close.
 - Templates use {{first_name}}, {{company}}, {{signal}}, {{insight}}, {{market}}, {{category}} placeholders.
-- Subject lines: 1-6 words, lowercase, specific, no clickbait.
+- Subject lines: 2-5 words, lowercase, about them or their move, read like an internal note. No colons or questions.
 - Use the voice rules. Copy a corridor fact only with its K-id and date. Never invent client names or results.
 - Do not quote prices unless offers.md marks them confirmed; say "fixed fee" instead.
 - Include the opt-out line in every email template.

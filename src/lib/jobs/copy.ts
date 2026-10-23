@@ -8,18 +8,43 @@ import { copySystemPrompt, COPY_PROMPT_VERSION } from "@/lib/claude/prompts/copy
 import { bannedPhrases } from "@/lib/kb";
 import { mockCopy } from "./mocks";
 
-/** Deterministic QA gates from docs/research/04 §3.9. */
+const PREAMBLES = [/^\s*(hi|hello|dear)[^\n]*\n+\s*(i hope|hope you|my name is|i wanted to|i am reaching|i'm reaching|allow me|just wanted)/i];
+const SIGNOFF = /^\s*(shardul\b|best\b|regards\b|thanks\b|cheers\b|warmly\b|—|--)/im;
+
+/** The part of an email that the reader actually reads: after the greeting, before the sign-off. */
+export function emailCore(body: string) {
+  let core = body;
+  const sign = core.search(SIGNOFF);
+  if (sign > 0) core = core.slice(0, sign);
+  core = core.replace(/^\s*(hi|hello|dear)\b[^\n]*\n/i, "");
+  return core.trim();
+}
+
+export function countSentences(text: string) {
+  return text.split(/(?<=[.?!])\s+|\n{2,}/).map((x) => x.trim()).filter((x) => /[a-z]/i.test(x)).length;
+}
+
+/** Deterministic QA gates (docs/research/04 §3.9 plus the cold-email craft rules in kb/voice.md). */
 export function qaFlags(subject: string, body: string, linkedin: string, factsUsed: { evidence_id: string }[], validIds: Set<string>) {
   const flags: string[] = [];
+  const core = emailCore(body);
+  if (countSentences(core) > 5) flags.push("over_5_sentences");
+  if ((core.match(/\?/g) ?? []).length > 1) flags.push("more_than_one_ask");
+  if (PREAMBLES.some((re) => re.test(body))) flags.push("preamble_opener");
   if (body.trim().split(/\s+/).length > 120) flags.push("email_over_120_words");
-  if (subject.trim().split(/\s+/).length > 8) flags.push("subject_over_8_words");
+  const subjWords = subject.trim().split(/\s+/).filter(Boolean).length;
+  if (subjWords > 5) flags.push("subject_over_5_words");
+  if (/[:?]/.test(subject)) flags.push("subject_has_colon_or_question");
+  if (subject !== subject.toLowerCase()) flags.push("subject_not_lowercase");
   if (linkedin.length > 300) flags.push("linkedin_over_300_chars");
   if (/[!]/.test(body) || /[!]/.test(subject)) flags.push("exclamation_mark");
   if (!/reply\s+'?no'?/i.test(body)) flags.push("missing_opt_out");
   if (/https?:\/\//i.test(body)) flags.push("link_in_body");
   if (/\$\s?\d|₹\s?\d|USD\s?\d/.test(body)) flags.push("price_mentioned");
+  if (/just (bumping|checking in|following up)/i.test(body)) flags.push("empty_follow_up");
   const lower = (body + " " + subject + " " + linkedin).toLowerCase();
   for (const phrase of bannedPhrases()) if (phrase && lower.includes(phrase)) { flags.push(`banned_phrase:${phrase}`); break; }
+  if (factsUsed.length === 0) flags.push("no_cited_fact");
   if (factsUsed.some((f) => !validIds.has(f.evidence_id))) flags.push("fact_without_evidence");
   return flags;
 }
@@ -53,7 +78,7 @@ Write the outreach package. Use the schema.`,
   await db.update(messages).set({ status: "superseded" }).where(eq(messages.personId, p.id));
   await db.insert(messages).values([
     { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 1, subject: output.email.subject, body: output.email.body, factsUsed: output.facts_used, qaFlags: flags },
-    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 2, subject: output.follow_up.subject, body: output.follow_up.body, qaFlags: [] },
+    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 2, subject: output.follow_up.subject, body: output.follow_up.body, qaFlags: [countSentences(emailCore(output.follow_up.body)) > 3 ? "follow_up_over_3_sentences" : "", /just (bumping|checking in|following up)/i.test(output.follow_up.body) ? "empty_follow_up" : ""].filter(Boolean) },
     { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "linkedin", step: 1, subject: null, body: output.linkedin_note, qaFlags: output.linkedin_note.length > 300 ? ["linkedin_over_300_chars"] : [] },
   ]);
   await db.update(reviews).set({ status: "superseded" }).where(eq(reviews.personId, p.id));
