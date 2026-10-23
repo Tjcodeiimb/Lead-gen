@@ -21,6 +21,8 @@ function connect(): Db {
     max_lifetime: 60 * 5,
     // Fail fast instead of hanging if the database is unreachable.
     connect_timeout: 10,
+    // TCP keepalive every 10s so home/office routers don't silently kill the socket.
+    keep_alive: 10,
   });
   return drizzle(client, { schema });
 }
