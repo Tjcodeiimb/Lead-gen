@@ -80,23 +80,41 @@ export async function researchCompany(companyId: string, lead: { fullName: strin
   return db.select().from(evidence).where(eq(evidence.companyId, companyId));
 }
 
-/** Code, not the model, builds the evidence pack from API citation objects. */
+/**
+ * Code, not the model, builds the evidence pack from API citation objects.
+ *
+ * The API splits the answer into many text blocks: citations attach to the block holding the cited
+ * sentence, while the "FINDING [C2] (date: ...)" prefix often sits in a separate block. So we stitch
+ * all text together, remember which character range each block's citations cover, and give each
+ * FINDING line every citation that overlaps it. A FINDING with no citation is dropped.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function harvestFindings(content: any[]): EvidenceRow[] {
-  const out: EvidenceRow[] = [];
-  let n = 0;
+export function harvestFindings(content: any[]): EvidenceRow[] {
+  let full = "";
+  const spans: { start: number; end: number; citations: { url?: string; title?: string; cited_text?: string; type?: string }[] }[] = [];
   for (const block of content) {
-    if (block.type !== "text" || typeof block.text !== "string") continue;
-    const m = block.text.match(/^FINDING\s*\[([^\]]*)\]\s*\(date:\s*([^)]*)\)\s*:\s*(.+)$/m);
-    const citations = Array.isArray(block.citations) ? block.citations : [];
-    if (!m || citations.length === 0) continue;
-    const c = citations[0];
-    n += 1;
+    if (block?.type !== "text" || typeof block.text !== "string") continue;
+    const start = full.length;
+    full += block.text;
+    if (Array.isArray(block.citations) && block.citations.length) spans.push({ start, end: full.length, citations: block.citations });
+  }
+
+  const out: EvidenceRow[] = [];
+  const lineRe = /^FINDING\s*\[([^\]]*)\]\s*\(date:\s*([^)]*)\)\s*:\s*(.+)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = lineRe.exec(full)) !== null) {
+    const lineStart = m.index;
+    const lineEnd = m.index + m[0].length;
+    const cites = spans.filter((sp) => sp.start < lineEnd && sp.end > lineStart).flatMap((sp) => sp.citations);
+    const c = cites.find((x) => x.url) ?? cites[0];
+    if (!c) continue;
     out.push({
-      evidence_id: `E${n}`,
-      criteria: m[1].split(",").map((s: string) => s.trim()).filter(Boolean),
+      evidence_id: `E${out.length + 1}`,
+      criteria: m[1].split(",").map((x) => x.trim()).filter(Boolean),
       claim: m[3].trim(),
-      url: c.url ?? null, title: c.title ?? null, cited_text: c.cited_text ?? null,
+      url: c.url ?? null,
+      title: c.title ?? null,
+      cited_text: cites.map((x) => x.cited_text).filter(Boolean).join(" … ").slice(0, 1000) || null,
       published_date: m[2].trim() || "undated",
       source_type: c.type === "web_search_result_location" ? "web_search" : "web_fetch",
     });
