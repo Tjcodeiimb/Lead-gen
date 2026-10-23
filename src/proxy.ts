@@ -29,8 +29,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
-  const email = data.user?.email?.toLowerCase();
+  // getClaims verifies the session token locally (no round trip to Supabase when keys are cached),
+  // and refreshes the session cookie if it is about to expire.
+  const { data } = await supabase.auth.getClaims();
+  const email = (data?.claims?.email as string | undefined)?.toLowerCase();
   const allowed = (process.env.ALLOWED_EMAILS ?? "")
     .toLowerCase()
     .split(",")
