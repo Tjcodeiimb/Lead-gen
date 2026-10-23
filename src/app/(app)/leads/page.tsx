@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Empty } from "@/components/ui/empty";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { timeAgo } from "@/lib/utils";
+import { RowLink } from "@/components/app/row-link";
 
 export default async function LeadsPage() {
   const rows = await db.select({ p: people, company: companies.name }).from(people).leftJoin(companies, eq(companies.id, people.companyId)).orderBy(desc(people.createdAt)).limit(200);
@@ -22,14 +23,14 @@ export default async function LeadsPage() {
             <thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Tier</th><th>Score</th><th>Status</th><th>Added</th></tr></thead>
             <tbody>
               {rows.map(({ p, company }) => (
-                <tr key={p.id}>
+                <RowLink key={p.id} href={`/leads/${p.id}`}>
                   <td className="font-medium"><Link href={`/leads/${p.id}`} className="hover:text-accent">{p.fullName}</Link></td>
                   <td>{company}</td><td className="t-caption">{p.title}</td>
                   <td>{p.tier && <Pill tone={tierTone(p.tier)}>{p.tier}</Pill>}</td>
                   <td>{p.score ?? ""}</td>
                   <td><Pill tone={statusTone(p.status)}>{p.status.replace(/_/g, " ")}</Pill></td>
                   <td className="t-caption">{timeAgo(p.createdAt)}</td>
-                </tr>
+                </RowLink>
               ))}
             </tbody>
           </table>

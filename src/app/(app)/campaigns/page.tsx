@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Empty } from "@/components/ui/empty";
 import { Pill, statusTone } from "@/components/ui/pill";
 import { timeAgo } from "@/lib/utils";
+import { RowLink } from "@/components/app/row-link";
 
 export default async function CampaignsPage() {
   const rows = await db.select({ c: campaigns, leads: count(people.id) }).from(campaigns)
@@ -23,12 +24,12 @@ export default async function CampaignsPage() {
             <thead><tr><th>Name</th><th>Persona</th><th>Corridor</th><th>Offer</th><th>Leads</th><th>Status</th><th>Created</th></tr></thead>
             <tbody>
               {rows.map(({ c, leads }) => (
-                <tr key={c.id}>
+                <RowLink key={c.id} href={`/campaigns/${c.id}`}>
                   <td className="font-medium"><Link href={`/campaigns/${c.id}`} className="hover:text-accent">{c.name}</Link></td>
                   <td>{c.persona}</td><td className="t-mono">{c.corridor}</td><td className="t-mono">{c.offer}</td>
                   <td>{leads}</td><td><Pill tone={statusTone(c.status)}>{c.status}</Pill></td>
                   <td className="t-caption">{timeAgo(c.createdAt)}</td>
-                </tr>
+                </RowLink>
               ))}
             </tbody>
           </table>
