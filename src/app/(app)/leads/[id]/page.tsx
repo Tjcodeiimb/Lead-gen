@@ -17,11 +17,17 @@ export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
   const [p] = await db.select().from(people).where(eq(people.id, id));
   if (!p) notFound();
-  const co = p.companyId ? (await db.select().from(companies).where(eq(companies.id, p.companyId)))[0] : null;
-  const camp = p.campaignId ? (await db.select().from(campaigns).where(eq(campaigns.id, p.campaignId)))[0] : null;
-  const [score] = await db.select().from(scores).where(eq(scores.personId, id)).orderBy(desc(scores.createdAt)).limit(1);
-  const ev = co ? await db.select().from(evidence).where(eq(evidence.companyId, co.id)) : [];
-  const msgs = await db.select().from(messages).where(eq(messages.personId, id)).orderBy(desc(messages.createdAt));
+  // Run the remaining lookups in parallel: each one is a round trip to the database.
+  const [coRows, campRows, scoreRows, ev, msgs] = await Promise.all([
+    p.companyId ? db.select().from(companies).where(eq(companies.id, p.companyId)) : Promise.resolve([]),
+    p.campaignId ? db.select().from(campaigns).where(eq(campaigns.id, p.campaignId)) : Promise.resolve([]),
+    db.select().from(scores).where(eq(scores.personId, id)).orderBy(desc(scores.createdAt)).limit(1),
+    p.companyId ? db.select().from(evidence).where(eq(evidence.companyId, p.companyId)) : Promise.resolve([]),
+    db.select().from(messages).where(eq(messages.personId, id)).orderBy(desc(messages.createdAt)),
+  ]);
+  const co = coRows[0] ?? null;
+  const camp = campRows[0] ?? null;
+  const score = scoreRows[0];
   const current = msgs.filter((m) => m.status !== "superseded");
 
   return (

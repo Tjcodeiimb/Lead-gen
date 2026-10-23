@@ -15,8 +15,9 @@ function connect(): Db {
   const client = postgres(url, {
     prepare: false,
     max: 5,
-    // Close idle connections before routers/NAT silently drop them (that caused 60s hangs + ECONNRESET).
-    idle_timeout: 20,
+    // Keepalive (below) stops routers dropping idle sockets, so connections can be reused for a while.
+    // Reconnecting to the Tokyo pooler costs ~1s, so avoid closing too eagerly.
+    idle_timeout: 120,
     // Recycle every connection after 5 minutes regardless.
     max_lifetime: 60 * 5,
     // Fail fast instead of hanging if the database is unreachable.
