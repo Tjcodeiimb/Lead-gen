@@ -1,11 +1,15 @@
 import { LoginForm } from "./login-form";
-import { isConfigured } from "@/lib/env";
+import { env, isConfigured } from "@/lib/env";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
   const denied = sp.denied === "1";
   const error = sp.error === "1";
   const configured = isConfigured();
+  // The project address is public (it is already sent to every browser). Showing it makes
+  // "wrong Supabase project" mistakes easy to spot.
+  let project = "";
+  try { project = new URL(env.supabaseUrl).hostname.replace(".supabase.co", ""); } catch {}
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6">
@@ -41,6 +45,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <LoginForm />
           </div>
         )}
+        {project && <p className="t-caption mt-6 text-center">Supabase project: <span className="t-mono">{project}</span></p>}
       </div>
     </main>
   );

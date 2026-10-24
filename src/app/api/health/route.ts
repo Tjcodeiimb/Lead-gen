@@ -5,6 +5,8 @@ export async function GET() {
     ok: true,
     configured: isConfigured(),
     claudeMode: env.claudeMode,
+    supabaseProject: (() => { try { return new URL(env.supabaseUrl).hostname.replace(".supabase.co", ""); } catch { return ""; } })(),
+    allowlistCount: env.allowedEmails.length,
     time: new Date().toISOString(),
   });
 }
