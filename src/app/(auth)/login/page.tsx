@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </div>
 
         <h1 className="h-display mb-2">Sign in.</h1>
-        <p className="t-body text-ink-2 mb-8">We&apos;ll email you a one-time link. No password to remember.</p>
+        <p className="t-body text-ink-2 mb-8">Use the email and password for your UpForge OS account.</p>
 
         {!configured ? (
           <div className="card p-6">
@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         ) : (
           <div className="card p-6">
             {denied && <p className="pill pill-danger mb-4">That email isn&apos;t on the allowlist (ALLOWED_EMAILS).</p>}
-            {error && <p className="pill pill-danger mb-4">That link has expired. Request a new one.</p>}
+            {error && <p className="pill pill-danger mb-4">Sign-in failed. Please try again.</p>}
             <LoginForm />
           </div>
         )}

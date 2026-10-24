@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { Pill } from "@/components/ui/pill";
 import { formatUsd, timeAgo } from "@/lib/utils";
 import { SettingsForm } from "./form";
+import { PasswordForm } from "./password-form";
 
 export default async function SettingsPage() {
   const rows = await db.select().from(settings);
@@ -23,6 +24,10 @@ export default async function SettingsPage() {
             <h3 className="h-section mb-1">Claude</h3>
             <p className="t-caption mb-4">Mode: <Pill tone={env.claudeMode === "live" ? "success" : "warning"}>{env.claudeMode}</Pill> · This month: {formatUsd(spend.usd)} across {spend.n} jobs</p>
             <SettingsForm pauseLlm={map.pause_llm === true} budget={Number(map.monthly_budget_usd ?? 150)} />
+          </section>
+          <section className="card p-6">
+            <h3 className="h-section mb-4">Password</h3>
+            <PasswordForm />
           </section>
           <section className="card p-6">
             <h3 className="h-section mb-2">Knowledge base</h3>

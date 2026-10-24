@@ -11,7 +11,7 @@ research, score and draft outreach, then approve every message yourself in a key
 
 | Area | Status |
 |---|---|
-| Magic-link sign-in with an email allowlist | ✅ |
+| Email and password sign-in with an email allowlist, change password in Settings | ✅ |
 | Campaign wizard → Claude writes positioning, ICP, signals, subject lines, 5-step sequence, LinkedIn note, objections | ✅ |
 | Lead import from CSV (auto column matching, dedupe, suppression check, lawful-basis capture) and manual add | ✅ |
 | Research with Claude web search + fetch → evidence ledger with citations (cached 30 days per company) | ✅ |

@@ -9,7 +9,7 @@ a review queue. Nothing is sent automatically. Read docs/research/00_synthesis_a
 
 ## Stack (do not swap without asking)
 Next.js 16 App Router (cacheComponents OFF) · TypeScript strict · Tailwind v4 with custom Apple-style tokens
-in src/app/globals.css (no shadcn) · Supabase (Postgres + magic-link Auth) · Drizzle ORM · @anthropic-ai/sdk
+in src/app/globals.css (no shadcn) · Supabase (Postgres + email/password Auth) · Drizzle ORM · @anthropic-ai/sdk
 with structured outputs · pnpm · Vitest.
 
 ## Commands

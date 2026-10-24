@@ -40,7 +40,7 @@ Until you add a Claude key, the app runs in **mock mode**: every "generate" butt
 ```
 pnpm dev
 ```
-Open http://localhost:3000. Enter your email, click the link Supabase sends you, and you are in.
+Open http://localhost:3000 and sign in with the email and password you created in Supabase (Authentication → Users → Add user → Create new user, with **Auto Confirm User** ticked). Then change the password under Settings.
 
 Things to try in mock mode:
 - **Campaigns → New campaign**: pick a persona, corridor and offer. Claude drafts the plan.
