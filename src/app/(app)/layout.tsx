@@ -2,7 +2,7 @@ import { count, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/db/client";
 import { reviews } from "@/db/schema";
-import { Sidebar } from "@/components/app/sidebar";
+import { Shell } from "@/components/app/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +15,5 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   } catch {
     pending = 0;
   }
-  return (
-    <div className="min-h-screen">
-      <Sidebar email={user.email} pendingReviews={pending} />
-      <main className="pl-[248px]">
-        <div className="max-w-[1180px] mx-auto px-10 py-10">{children}</div>
-      </main>
-    </div>
-  );
+  return <Shell email={user.email} pendingReviews={pending}>{children}</Shell>;
 }

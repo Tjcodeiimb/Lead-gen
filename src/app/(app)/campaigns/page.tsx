@@ -20,7 +20,7 @@ export default async function CampaignsPage() {
         {rows.length === 0 ? (
           <Empty icon={Megaphone} title="No campaigns yet" description="Start with the persona you can reach fastest. Claude drafts the rest." action={<Link href="/campaigns/new" className="btn btn-primary">Create your first campaign</Link>} />
         ) : (
-          <table className="table">
+          <div className="table-wrap"><table className="table">
             <thead><tr><th>Name</th><th>Persona</th><th>Corridor</th><th>Offer</th><th>Leads</th><th>Status</th><th>Created</th></tr></thead>
             <tbody>
               {rows.map(({ c, leads }) => (
@@ -32,7 +32,7 @@ export default async function CampaignsPage() {
                 </RowLink>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </>

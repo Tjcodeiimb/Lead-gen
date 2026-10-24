@@ -12,10 +12,10 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar({ email, pendingReviews }: { email: string; pendingReviews: number }) {
+export function Sidebar({ email, pendingReviews, inline }: { email: string; pendingReviews: number; inline?: boolean }) {
   const pathname = usePathname();
   return (
-    <aside className="glass fixed inset-y-0 left-0 w-[248px] border-r border-line flex flex-col px-4 py-6 z-20">
+    <aside className={inline ? "h-full flex flex-col px-4 py-6" : "glass fixed inset-y-0 left-0 w-[248px] border-r border-line flex flex-col px-4 py-6 z-20"}>
       <Link href="/" className="flex items-center gap-2.5 px-2 mb-8">
         <div className="h-8 w-8 rounded-[10px] bg-ink text-canvas flex items-center justify-center text-[13px] font-semibold">U</div>
         <div className="leading-tight">

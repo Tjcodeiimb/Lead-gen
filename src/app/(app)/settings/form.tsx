@@ -3,7 +3,17 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
-import { setSetting } from "@/server/actions/settings";
+import { deleteDemoData, setSetting } from "@/server/actions/settings";
+
+export function DemoDataButton() {
+  const [pending, start] = useTransition();
+  return (
+    <Button variant="secondary" size="sm" loading={pending} onClick={() => {
+      if (!confirm("Delete the demo campaign and the three fictional leads? Your real data stays.")) return;
+      start(async () => { const r = await deleteDemoData(); toast.success(`Removed ${r.people} demo leads, ${r.companies} companies, ${r.campaigns} campaign`); });
+    }}>Delete demo data</Button>
+  );
+}
 
 export function SettingsForm({ pauseLlm, budget }: { pauseLlm: boolean; budget: number }) {
   const [paused, setPaused] = useState(pauseLlm);

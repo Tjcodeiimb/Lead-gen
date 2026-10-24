@@ -19,6 +19,7 @@ export function ReviewQueue({ items }: { items: ReviewItem[] }) {
   const [idx, setIdx] = useState(0);
   const [pending, start] = useTransition();
   const [rejecting, setRejecting] = useState(false);
+  const [armed, setArmed] = useState(false);
   const [reason, setReason] = useState("weak_fit");
   const router = useRouter();
   const item = items[Math.min(idx, items.length - 1)];
@@ -39,13 +40,16 @@ export function ReviewQueue({ items }: { items: ReviewItem[] }) {
       if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.tagName === "SELECT")) return;
       if (e.key === "j") setIdx((i) => Math.min(i + 1, items.length - 1));
       if (e.key === "k") setIdx((i) => Math.max(i - 1, 0));
-      if (e.key === "a") approve();
+      if (e.key === "a") {
+        if (armed) { setArmed(false); approve(); }
+        else { setArmed(true); toast("Press A again to approve", { duration: 2000 }); setTimeout(() => setArmed(false), 2000); }
+      }
       if (e.key === "x") setRejecting(true);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.reviewId, items.length]);
+  }, [item?.reviewId, items.length, armed]);
 
   if (!item) return null;
 

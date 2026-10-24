@@ -12,8 +12,8 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       <h2 className="h-title mb-2">{db ? "The database didn't answer in time" : "Something went wrong"}</h2>
       <p className="t-body text-ink-2 mb-6">
         {db
-          ? "This is usually a dropped connection and fixes itself on retry. If it keeps happening, the PowerShell window shows the reason on the line starting with [cause]."
-          : "The details are in the PowerShell window running the app."}
+          ? "This is usually a dropped connection and fixes itself on retry. If it keeps happening, the server log shows the reason (PowerShell on your laptop, or Vercel → Deployments → Logs)."
+          : "The details are in the server log: PowerShell on your laptop, or Vercel → Deployments → Logs."}
       </p>
       <Button onClick={reset}><RefreshCw className="h-4 w-4" /> Try again</Button>
     </div>

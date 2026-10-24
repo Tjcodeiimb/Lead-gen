@@ -88,8 +88,8 @@ export default async function CampaignDetail({ params, searchParams }: PageProps
           <Link href={`/leads/import?campaignId=${c.id}`} className="btn btn-secondary btn-sm"><Upload className="h-3.5 w-3.5" /> Import CSV</Link>
         </div>
         {leads.length === 0 ? <p className="px-6 pb-6 t-caption">No leads yet. Import a CSV or add one manually from the Leads page.</p> : (
-          <table className="table"><thead><tr><th>Name</th><th>Title</th><th>Tier</th><th>Score</th><th>Status</th></tr></thead>
-            <tbody>{leads.map((l) => <tr key={l.id}><td className="font-medium"><Link href={`/leads/${l.id}`} className="hover:text-accent">{l.fullName}</Link></td><td className="t-caption">{l.title}</td><td>{l.tier && <Pill tone={tierTone(l.tier)}>{l.tier}</Pill>}</td><td>{l.score ?? ""}</td><td><Pill tone={statusTone(l.status)}>{l.status.replace("_", " ")}</Pill></td></tr>)}</tbody></table>
+          <div className="table-wrap"><table className="table"><thead><tr><th>Name</th><th>Title</th><th>Tier</th><th>Score</th><th>Status</th></tr></thead>
+            <tbody>{leads.map((l) => <tr key={l.id}><td className="font-medium"><Link href={`/leads/${l.id}`} className="hover:text-accent">{l.fullName}</Link></td><td className="t-caption">{l.title}</td><td>{l.tier && <Pill tone={tierTone(l.tier)}>{l.tier}</Pill>}</td><td>{l.score ?? ""}</td><td><Pill tone={statusTone(l.status)}>{l.status.replace("_", " ")}</Pill></td></tr>)}</tbody></table></div>
         )}
       </section>
     </>

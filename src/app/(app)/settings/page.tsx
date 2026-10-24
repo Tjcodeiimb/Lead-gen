@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { env } from "@/lib/env";
 import { Pill } from "@/components/ui/pill";
 import { formatUsd, timeAgo } from "@/lib/utils";
-import { SettingsForm } from "./form";
+import { DemoDataButton, SettingsForm } from "./form";
 import { PasswordForm } from "./password-form";
 
 export default async function SettingsPage() {
@@ -28,6 +28,11 @@ export default async function SettingsPage() {
           <section className="card p-6">
             <h3 className="h-section mb-4">Password</h3>
             <PasswordForm />
+          </section>
+          <section className="card p-6">
+            <h3 className="h-section mb-1">Demo data</h3>
+            <p className="t-caption mb-3">The seed script added one demo campaign and three fictional leads so the screens weren&apos;t empty. Remove them when you&apos;re ready for real data.</p>
+            <DemoDataButton />
           </section>
           <section className="card p-6">
             <h3 className="h-section mb-2">Knowledge base</h3>

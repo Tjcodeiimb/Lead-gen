@@ -1,6 +1,7 @@
 /**
- * Seeds a demo campaign and three fictional leads so the UI has something to show.
- * Run: pnpm db:seed   (needs DATABASE_URL in .env.local)
+ * Seeds the default settings. Add --demo to also create a demo campaign and three fictional
+ * leads (removable later from Settings → Delete demo data).
+ * Run: pnpm db:seed   or   pnpm db:seed --demo
  */
 import "dotenv/config";
 import { db } from "../src/db/client";
@@ -8,6 +9,7 @@ import { campaigns, companies, people, settings } from "../src/db/schema";
 
 async function main() {
   await db.insert(settings).values([{ key: "pause_llm", value: false }, { key: "monthly_budget_usd", value: 150 }]).onConflictDoNothing();
+  if (!process.argv.includes("--demo")) { console.log("Settings seeded. Run with --demo to add sample data."); process.exit(0); }
   const [c] = await db.insert(campaigns).values({ name: "Indian D2C brands → UAE (demo)", persona: "A", corridor: "IN->AE", offer: "OFF-3", goal: "Book 8 discovery calls", notes: "Demo campaign. Non-diaspora shoppers are the angle." }).returning();
   const demo = [
     { company: "Meera Botanicals (fictional)", domain: "meerabotanicals.example", name: "Asha Rao", title: "Founder & CEO", email: "asha@meerabotanicals.example", country: "IN" },

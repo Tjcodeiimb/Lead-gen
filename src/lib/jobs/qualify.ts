@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { agentRuns, companies, evidence, people, scores } from "@/db/schema";
 import { claude, isMock } from "@/lib/claude/client";
@@ -126,8 +126,22 @@ export function harvestFindings(content: any[]): EvidenceRow[] {
 export async function qualifyPerson(personId: string) {
   const [p] = await db.select().from(people).where(eq(people.id, personId));
   if (!p) throw new Error("Lead not found");
-  await db.update(people).set({ status: "qualifying" }).where(eq(people.id, personId));
+  if (p.doNotContact) throw new Error("This lead is suppressed.");
+  // Atomic claim: only one run at a time per lead, even if the button is clicked twice.
+  const claimed = await db.update(people).set({ status: "qualifying" })
+    .where(and(eq(people.id, personId), sql`${people.status} <> 'qualifying'`)).returning({ id: people.id });
+  if (claimed.length === 0) throw new Error("This lead is already being processed. Give it a minute.");
 
+  try {
+    return await qualifyClaimed(p);
+  } catch (e) {
+    await db.update(people).set({ status: p.status === "qualifying" ? "new" : p.status }).where(eq(people.id, personId));
+    throw e;
+  }
+}
+
+async function qualifyClaimed(p: typeof people.$inferSelect) {
+  const personId = p.id;
   let co = p.companyId ? (await db.select().from(companies).where(eq(companies.id, p.companyId)))[0] : undefined;
   if (!co) {
     [co] = await db.insert(companies).values({ name: p.fullName + " (unknown company)" }).returning();

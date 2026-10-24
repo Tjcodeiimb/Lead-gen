@@ -51,7 +51,7 @@ export default async function Dashboard() {
               </div>
             </div>
           ) : (
-            <table className="table">
+            <div className="table-wrap"><table className="table">
               <thead><tr><th>Name</th><th>Persona</th><th>Corridor</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {recentCampaigns.map((c) => (
@@ -63,7 +63,7 @@ export default async function Dashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
         <div className="card lg:col-span-2 fade-up">

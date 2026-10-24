@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Ban, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { runCopy, runPipeline, runQualify, suppressLead } from "@/server/actions/leads";
+import { markSent } from "@/server/actions/review";
 
 type Job = "pipeline" | "qualify" | "copy" | null;
 
@@ -68,6 +69,9 @@ export function LeadActions({ id, status, tier, doNotContact }: { id: string; st
             <Button variant="secondary" size="sm" disabled={busy} onClick={() => run("qualify", async () => { const r = await runQualify(id); if (r.ok) { toast.success(`Scored ${r.total} · Tier ${r.tier}`); router.refresh(); } else toast.error(r.error); })}>Qualify only</Button>
             <Button variant="secondary" size="sm" disabled={busy || !tier || tier === "DQ"} onClick={() => run("copy", async () => { const r = await runCopy(id); if (r.ok) { toast.success("Drafts written"); router.refresh(); } else toast.error(r.error); })}><Wand2 className="h-3.5 w-3.5" /> Draft copy</Button>
           </div>
+          {status === "approved" && (
+            <Button variant="secondary" className="w-full" disabled={busy} onClick={() => start(async () => { await markSent(id); toast.success("Marked as sent"); router.refresh(); })}>I&apos;ve sent the first email</Button>
+          )}
           <Button variant="ghost" size="sm" className="w-full !text-danger" disabled={busy} onClick={() => { if (confirm("Add this person to the permanent suppression list?")) start(async () => { await suppressLead(id, "manual"); toast.success("Suppressed"); router.refresh(); }); }}><Ban className="h-3.5 w-3.5" /> Suppress</Button>
         </>
       )}

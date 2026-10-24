@@ -11,7 +11,7 @@ declare global {
 
 function connect(): Db {
   const url = pickDatabaseUrl();
-  if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. Copy .env.example to .env.local and fill it in (SETUP.md step 2).");
+  if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. On your laptop: fill in .env.local. On Vercel: Settings → Environment Variables, then Redeploy.");
   // Supabase's transaction pooler (port 6543) does not support prepared statements.
   const client = postgres(url, {
     prepare: false,

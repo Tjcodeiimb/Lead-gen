@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import Papa from "papaparse";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
@@ -42,9 +42,15 @@ export async function importLeadsCsv(formData: FormData): Promise<{ ok: true; in
   if (!(file instanceof File)) return { ok: false, error: "Choose a CSV file." };
   if (!sourceDescription) return { ok: false, error: "Describe where this list came from (required for the privacy notice)." };
 
+  if (file.size > 5 * 1024 * 1024) return { ok: false, error: "That file is over 5 MB. Split it into smaller files." };
   const text = await file.text();
   const parsed = Papa.parse<Row>(text, { header: true, skipEmptyLines: true });
-  let inserted = 0, skipped = 0, suppressed = 0;
+  if (parsed.data.length > 2000) return { ok: false, error: "That file has more than 2,000 rows. Split it into smaller files." };
+
+  // Pass 1: normalise every row in memory.
+  type Prepared = { first: string; last: string; full: string; companyName: string; email: string | null; emailHash: string | null; domain: string | null; row: Row };
+  const prepared: Prepared[] = [];
+  let skipped = 0;
   for (const row of parsed.data) {
     const first = pick(row, "first_name", "firstname", "first");
     const last = pick(row, "last_name", "lastname", "last");
@@ -52,30 +58,62 @@ export async function importLeadsCsv(formData: FormData): Promise<{ ok: true; in
     const companyName = pick(row, "company", "company_name", "organization", "organisation");
     if (!full || !companyName) { skipped++; continue; }
     const email = pick(row, "email", "work_email", "email_address") || null;
-    const emailHash = email ? sha(email) : null;
-    if (emailHash) {
-      const [sup] = await db.select().from(suppressionList).where(and(eq(suppressionList.kind, "email"), eq(suppressionList.valueHash, emailHash)));
-      if (sup) { suppressed++; continue; }
-      const [dup] = await db.select({ id: people.id }).from(people).where(eq(people.emailHash, emailHash));
-      if (dup) { skipped++; continue; }
+    const domain = normDomain(pick(row, "domain", "website", "company_domain", "url")) || (email && !/gmail|yahoo|outlook|hotmail/i.test(email) ? email.split("@")[1]?.toLowerCase() ?? null : null);
+    prepared.push({ first, last, full, companyName, email, emailHash: email ? sha(email) : null, domain, row });
+  }
+
+  // Pass 2: three bulk lookups instead of three queries per row.
+  const hashes = prepared.map((p) => p.emailHash).filter((h): h is string => Boolean(h));
+  const [suppressedRows, existingRows] = await Promise.all([
+    hashes.length ? db.select({ h: suppressionList.valueHash }).from(suppressionList).where(and(eq(suppressionList.kind, "email"), inArray(suppressionList.valueHash, hashes))) : Promise.resolve([]),
+    hashes.length ? db.select({ h: people.emailHash }).from(people).where(inArray(people.emailHash, hashes)) : Promise.resolve([]),
+  ]);
+  const suppressedSet = new Set(suppressedRows.map((r) => r.h));
+  const existingSet = new Set(existingRows.map((r) => r.h));
+  const seen = new Set<string>();
+  let suppressed = 0;
+  const toInsert = prepared.filter((p) => {
+    if (p.emailHash) {
+      if (suppressedSet.has(p.emailHash)) { suppressed++; return false; }
+      if (existingSet.has(p.emailHash) || seen.has(p.emailHash)) { skipped++; return false; }
+      seen.add(p.emailHash);
     }
-    const domain = normDomain(pick(row, "domain", "website", "company_domain", "url")) || (email && !/gmail|yahoo|outlook|hotmail/i.test(email) ? email.split("@")[1]?.toLowerCase() : null);
-    const company = await upsertCompany(companyName, domain, {
-      hqCountry: pick(row, "hq_country", "company_country", "country_code").slice(0, 2).toUpperCase() || null,
-      industry: pick(row, "industry", "sector") || null,
-      employeeRange: pick(row, "employees", "employee_range", "headcount", "size") || null,
-      revenueBandUsd: pick(row, "revenue", "revenue_band") || null,
-      linkedinUrl: pick(row, "company_linkedin") || null,
-    });
-    await db.insert(people).values({
-      companyId: company.id, campaignId, firstName: first || null, lastName: last || null, fullName: full,
-      title: pick(row, "title", "job_title", "position", "role") || null, email, emailHash,
-      linkedinUrl: pick(row, "linkedin", "linkedin_url", "profile") || null,
-      country: pick(row, "country", "person_country", "location_country").slice(0, 2).toUpperCase() || null,
-      source, sourceDescription, lawfulBasis, notes: pick(row, "notes", "note") || null,
-      publicationEvidenceUrl: pick(row, "publication_evidence_url", "evidence_url") || null,
-    });
-    inserted++;
+    return true;
+  });
+
+  // Pass 3: upsert companies by domain in bulk, then insert people in batches.
+  const domains = Array.from(new Set(toInsert.map((p) => p.domain).filter((d): d is string => Boolean(d))));
+  const existingCompanies = domains.length ? await db.select().from(companies).where(inArray(companies.domain, domains)) : [];
+  const companyByDomain = new Map(existingCompanies.map((c) => [c.domain!, c.id]));
+  const newCompanies = toInsert
+    .filter((p) => !p.domain || !companyByDomain.has(p.domain))
+    .filter((p, i, arr) => !p.domain || arr.findIndex((q) => q.domain === p.domain) === i)
+    .map((p) => ({
+      name: p.companyName, domain: p.domain,
+      hqCountry: pick(p.row, "hq_country", "company_country", "country_code").slice(0, 2).toUpperCase() || null,
+      industry: pick(p.row, "industry", "sector") || null,
+      employeeRange: pick(p.row, "employees", "employee_range", "headcount", "size") || null,
+      revenueBandUsd: pick(p.row, "revenue", "revenue_band") || null,
+      linkedinUrl: pick(p.row, "company_linkedin") || null,
+    }));
+  const companyByName = new Map<string, string>();
+  for (let i = 0; i < newCompanies.length; i += 200) {
+    const inserted = await db.insert(companies).values(newCompanies.slice(i, i + 200)).returning({ id: companies.id, domain: companies.domain, name: companies.name });
+    for (const c of inserted) { if (c.domain) companyByDomain.set(c.domain, c.id); else companyByName.set(c.name, c.id); }
+  }
+  const peopleRows = toInsert.map((p) => ({
+    companyId: (p.domain ? companyByDomain.get(p.domain) : companyByName.get(p.companyName)) ?? null,
+    campaignId, firstName: p.first || null, lastName: p.last || null, fullName: p.full,
+    title: pick(p.row, "title", "job_title", "position", "role") || null, email: p.email, emailHash: p.emailHash,
+    linkedinUrl: pick(p.row, "linkedin", "linkedin_url", "profile") || null,
+    country: pick(p.row, "country", "person_country", "location_country").slice(0, 2).toUpperCase() || null,
+    source, sourceDescription, lawfulBasis, notes: pick(p.row, "notes", "note") || null,
+    publicationEvidenceUrl: pick(p.row, "publication_evidence_url", "evidence_url") || null,
+  }));
+  let inserted = 0;
+  for (let i = 0; i < peopleRows.length; i += 200) {
+    const r = await db.insert(people).values(peopleRows.slice(i, i + 200)).onConflictDoNothing().returning({ id: people.id });
+    inserted += r.length;
   }
   await db.insert(auditLog).values({ actor: `user:${user.email}`, action: "leads.import", details: { file: file.name, inserted, skipped, suppressed, source, lawfulBasis } });
   revalidatePath("/leads");
@@ -107,7 +145,6 @@ export async function runQualify(personId: string): Promise<{ ok: true; tier: st
     revalidatePath(`/leads/${personId}`); revalidatePath("/leads");
     return { ok: true, tier: score.tier, total: score.total };
   } catch (e) {
-    await db.update(people).set({ status: "new" }).where(eq(people.id, personId));
     return { ok: false, error: e instanceof Error ? e.message : "Unknown error" };
   }
 }

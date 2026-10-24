@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { campaigns, companies, evidence, messages, people, reviews, scores } from "@/db/schema";
 import { runJob } from "@/lib/claude/runner";
@@ -54,7 +54,7 @@ export async function writeCopyForPerson(personId: string) {
   if (!p) throw new Error("Lead not found");
   const co = p.companyId ? (await db.select().from(companies).where(eq(companies.id, p.companyId)))[0] : undefined;
   const camp = p.campaignId ? (await db.select().from(campaigns).where(eq(campaigns.id, p.campaignId)))[0] : undefined;
-  const [score] = await db.select().from(scores).where(eq(scores.personId, p.id)).orderBy(scores.createdAt).limit(50);
+  const [score] = await db.select().from(scores).where(and(eq(scores.personId, p.id), eq(scores.isCurrent, true))).orderBy(desc(scores.createdAt)).limit(1);
   const ev = co ? await db.select().from(evidence).where(eq(evidence.companyId, co.id)) : [];
   const validIds = new Set<string>([...ev.map((e) => e.evidenceId), ...Array.from({ length: 11 }, (_, i) => `K${i + 1}`)]);
   const market = camp?.corridor?.split("->")[1]?.trim() || "the target market";
