@@ -42,8 +42,14 @@ export function KeyCard({ def, status, usage, testable, compact }: { def: Def; s
       {!status.fromEnv && (
         <form className="flex gap-2 mt-4" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveIntegrationKey(def.key, value); if (r.ok) { toast.success(`${def.label} saved`); setValue(""); router.refresh(); } else toast.error(r.error); }); }}>
           <Input type="password" placeholder={status.set ? "Paste a new key to replace" : "Paste key"} value={value} onChange={(e) => setValue(e.target.value)} className="!py-2" autoComplete="off" />
-          <Button type="submit" size="sm" variant="secondary" loading={pending} disabled={!value.trim()}>Save</Button>
-          {testable && <Button type="button" size="sm" loading={testing} disabled={!value.trim() && !status.set} onClick={() => startTest(async () => { const r = await testClaude(value.trim() || undefined); if (r.ok) toast.success(`Key works (${r.model})`); else toast.error(r.error); })}>Test</Button>}
+          <Button type="submit" size="sm" variant={testable ? "ghost" : "secondary"} loading={pending} disabled={!value.trim()}>{testable ? "Save without testing" : "Save"}</Button>
+          {testable && <Button type="button" size="sm" loading={testing} disabled={!value.trim() && !status.set} onClick={() => startTest(async () => {
+            const typed = value.trim();
+            const r = await testClaude(typed || undefined);
+            if (!r.ok) { toast.error(r.error); return; }
+            if (typed) { const saved = await saveIntegrationKey(def.key, typed); if (!saved.ok) { toast.error(saved.error); return; } setValue(""); router.refresh(); }
+            toast.success(typed ? `Key works and is saved (${r.model})` : `Saved key works (${r.model})`);
+          })}>Test and save</Button>}
         </form>
       )}
 
