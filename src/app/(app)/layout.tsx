@@ -8,9 +8,8 @@ import { ensureMigrated } from "@/db/migrate";
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const user = await requireUser();
-  // Creates or updates the database tables on first use, so no terminal command is ever needed.
-  const m = await ensureMigrated();
+  // Sign-in check and schema check in parallel: both are needed, neither depends on the other.
+  const [user, m] = await Promise.all([requireUser(), ensureMigrated()]);
   if (!m.ok) throw new Error(`Database setup failed: ${m.error}`);
   let pending = 0;
   try {

@@ -31,6 +31,11 @@ export default async function SettingsPage() {
             <PasswordForm />
           </section>
           <section className="card p-6">
+            <h3 className="h-section mb-1">Feels slow?</h3>
+            <p className="t-caption mb-3">The diagnostics page times every step of a page load on the live server, so we can see what is slow instead of guessing.</p>
+            <a href="/settings/diagnostics" className="btn btn-secondary btn-sm">Open diagnostics</a>
+          </section>
+          <section className="card p-6">
             <h3 className="h-section mb-1">Demo data</h3>
             <p className="t-caption mb-3">The seed script added one demo campaign and three fictional leads so the screens weren&apos;t empty. Remove them when you&apos;re ready for real data.</p>
             <DemoDataButton />
