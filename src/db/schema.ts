@@ -55,10 +55,20 @@ export const campaigns = pgTable("campaigns", {
   name: text("name").notNull(),
   status: campaignStatus("status").notNull().default("draft"),
   persona: text("persona").notNull(),                  // A..G (docs/research/03 §4)
-  corridor: text("corridor").notNull(),                // e.g. IN->AE
+  corridor: text("corridor").notNull(),                // derived: companyCountry->targetCountry
   offer: text("offer").notNull(),                      // OFF-0..OFF-8
   goal: text("goal"),
   notes: text("notes"),
+  // Targeting (src/lib/targeting.ts)
+  niche: text("niche"),                                // d2c | saas | pe_vc | family
+  subNiche: text("sub_niche"),                         // beauty | fashion | ...
+  companyCountry: varchar("company_country", { length: 2 }),
+  companyCity: text("company_city"),
+  targetCountry: varchar("target_country", { length: 2 }),
+  targetCity: text("target_city"),
+  companySizes: text("company_sizes").array(),         // "51,200" ranges (Apollo format)
+  roles: text("roles").array(),                        // role group values
+  keywords: text("keywords"),                          // extra free-text keywords
   brief: jsonb("brief").$type<CampaignBrief | null>(),// Claude-generated plan (schemas/campaign.ts)
   dailyNewLeadCap: integer("daily_new_lead_cap").notNull().default(30),
   agentRunId: uuid("agent_run_id"),
@@ -102,6 +112,8 @@ export const people = pgTable("people", {
   notes: text("notes"),
   doNotContact: boolean("do_not_contact").notNull().default(false),
   lastContactedAt: timestamp("last_contacted_at", { withTimezone: true }),
+  nextStep: integer("next_step"),                       // next email step due (sequence tracking)
+  nextStepDue: date("next_step_due"),
   retentionUntil: date("retention_until"),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [
@@ -201,6 +213,8 @@ export const messages = pgTable("messages", {
   factsUsed: jsonb("facts_used").$type<{ fact: string; evidence_id: string }[]>(),
   qaFlags: text("qa_flags").array(),
   status: reviewStatus("status").notNull().default("pending"),
+  dayOffset: integer("day_offset").notNull().default(0),  // days after step 1 this should go out
+  gmailDraftId: text("gmail_draft_id"),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: createdAt(), updatedAt: updatedAt(),
@@ -236,6 +250,53 @@ export const auditLog = pgTable("audit_log", {
   subjectId: text("subject_id"),
   details: jsonb("details"),
 });
+
+/* ---------- lead finding (agents / connectors) ---------- */
+export const finderSource = pgEnum("finder_source", ["claude_web", "apollo", "signals", "hunter"]);
+export const candidateStatus = pgEnum("candidate_status", ["new", "imported", "dismissed"]);
+
+export const finderRuns = pgTable("finder_runs", {
+  id: pk(),
+  campaignId: uuid("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  source: finderSource("source").notNull(),
+  status: runStatus("status").notNull().default("queued"),
+  query: jsonb("query"),                                 // what was searched
+  found: integer("found").notNull().default(0),
+  costUsd: money("cost_usd").default("0"),
+  creditsUsed: integer("credits_used").default(0),
+  log: text("log"),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+}, (t) => [index("finder_runs_campaign").on(t.campaignId, t.startedAt)]);
+
+export const candidates = pgTable("candidates", {
+  id: pk(),
+  campaignId: uuid("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  finderRunId: uuid("finder_run_id").references(() => finderRuns.id, { onDelete: "set null" }),
+  source: finderSource("source").notNull(),
+  status: candidateStatus("status").notNull().default("new"),
+  companyName: text("company_name").notNull(),
+  domain: varchar("domain", { length: 255 }),
+  companyCountry: varchar("company_country", { length: 2 }),
+  companyCity: text("company_city"),
+  industry: text("industry"),
+  employeeRange: text("employee_range"),
+  fullName: text("full_name"),                           // null = company only, people still to find
+  firstName: text("first_name"),
+  title: text("title"),
+  email: text("email"),
+  emailStatus: emailStatus("email_status").notNull().default("unknown"),
+  linkedinUrl: text("linkedin_url"),
+  externalId: text("external_id"),                        // apollo person id etc.
+  signal: text("signal"),                                 // why this company: "Hiring Country Manager UAE (2026-10-02)"
+  signalUrl: text("signal_url"),
+  sourceUrl: text("source_url"),                          // where the person/company was found
+  confidence: real("confidence"),                         // 0..1
+  dedupeKey: varchar("dedupe_key", { length: 64 }).notNull(), // sha256(campaign|domain-or-company|name)
+  personId: uuid("person_id").references(() => people.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("candidates_dedupe").on(t.dedupeKey), index("candidates_campaign_status").on(t.campaignId, t.status)]);
 
 /* ---------- types shared with the UI ---------- */
 export type CampaignBrief = {

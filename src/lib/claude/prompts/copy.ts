@@ -20,8 +20,9 @@ connection note. Your reader is a senior executive who is busy, sceptical of con
 5. Voice: plain, peer-to-peer, contractions fine, varied rhythm. No preamble, no banned phrases, no exclamation marks,
    no emojis, no links in the body.
 6. Subject: two to five words, lowercase, about them or their specific move. No colons, no questions.
-7. Follow-up: two or three sentences written as a reply, adding ONE new thing (a second data point or a smaller ask).
-   Never "just bumping this".
+7. Sequence: follow_up (day 4) and follow_up_2 (day 9) are two or three sentences written as replies, each adding
+   ONE new thing (a second data point, a permitted proof point, or a smaller ask). close (day 18) is one or two
+   sentences, gracious, no ask, offers the free pulse. Never "just bumping this". Subjects of replies start with "re: ".
 8. LinkedIn note: under 300 characters, a reason to connect grounded in one fact. No pitch, no price.
 9. Corridor facts: at most one, with its date and K-id.
 10. Prices only if offers.md marks the band confirmed; otherwise say "fixed fee" or leave price out.

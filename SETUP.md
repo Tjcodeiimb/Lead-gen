@@ -42,10 +42,10 @@ pnpm dev
 ```
 Open http://localhost:3000 and sign in with the email and password you created in Supabase (Authentication → Users → Add user → Create new user, with **Auto Confirm User** ticked). Then change the password under Settings.
 
-Things to try in mock mode:
-- **Campaigns → New campaign**: pick a persona, corridor and offer. Claude drafts the plan.
-- **Leads → Import CSV**: any spreadsheet with name + company columns. Or **Add lead** by hand.
-- Open a lead → **Research, qualify and draft**. Watch the score bars fill, then find the drafts in **Review Queue**.
+Things to try in mock mode (everything returns samples until you add a Claude key):
+- **Campaigns → New campaign**: pick a niche, where the companies are, which market they're entering, size and roles.
+- On the campaign's **Find leads** tab, run a finder. Tick candidates and **Import**.
+- Open a lead → **Research, qualify and draft**. Approve in **Review Queue**. Then on the lead's Sequence, send each step and mark it sent; the dashboard shows what's due.
 - **Settings**: the kill switch and monthly budget.
 
 ## 4. Go live with Claude
@@ -64,7 +64,34 @@ What a lead costs live (list prices, Oct 2026): research with 5 web searches ≈
 3. Deploy. Then in Supabase **Authentication → URL Configuration** add `https://YOUR-APP.vercel.app` as Site URL and `https://YOUR-APP.vercel.app/auth/callback` to Redirect URLs.
 4. Every `git push` to `main` redeploys automatically.
 
-## 6. Editing the knowledge base
+## 6. Connect the lead finders (all free)
+
+Open **Integrations** in the app's sidebar. Each finder needs a free account and its key. Paste the key into the box and click Save.
+
+| Finder | Create the free account | Where the key is |
+|---|---|---|
+| Claude web research | Nothing to do. Uses your Claude API key. | — |
+| Apollo | https://www.apollo.io/sign-up (free plan) | Settings → Integrations → API → Create new key. Tick "Master API key". |
+| Expansion signals: job posts | https://theirstack.com (free plan, 200 credits/month) | Settings → API keys |
+| Expansion signals: UK registry | https://developer.company-information.service.gov.uk → Register → Create an application → REST key | Shown on the application page |
+| Hunter (find emails) | https://hunter.io/users/sign_up (free plan) | https://hunter.io/api-keys |
+
+News signals need no key.
+
+### Gmail drafts (optional, about 15 minutes once)
+
+This lets the app put approved emails into your Gmail Drafts so you only press Send.
+
+1. Go to https://console.cloud.google.com and sign in with your Google Workspace account. Click the project drop-down at the top, then **New project**, name it `upforge-os`, click Create, and select it.
+2. In the left menu open **APIs & Services → Library**. Search **Gmail API** and click **Enable**.
+3. Open **APIs & Services → OAuth consent screen**. Choose **Internal** if you have Google Workspace, otherwise **External**. App name `UpForge OS`, your email for both contact fields, Save. If External, click **Audience → Add users** and add your own email as a test user.
+4. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**. Application type **Web application**, name `upforge-os`.
+   - Under **Authorised redirect URIs** click Add and enter your app address followed by `/api/google/callback`. For local use: `http://localhost:3000/api/google/callback`. For Vercel: `https://YOUR-APP.vercel.app/api/google/callback`. You can add both.
+   - Click Create. Copy the **Client ID** and **Client secret**.
+5. In the app, open **Integrations**, paste both under Gmail drafts, Save each, then click **Connect Google** and approve. The scope is "compose" only: the app can create drafts but cannot read your mail or send.
+6. Make sure `NEXT_PUBLIC_APP_URL` matches the address you are using (in `.env.local` locally, in Vercel's Environment Variables when live), or Google will reject the redirect.
+
+## 7. Editing the knowledge base
 
 Claude reads the markdown files in `/kb` on every call:
 - `offers.md` — **confirm the prices**. Until you do, copy says "fixed fee" instead of a number.
@@ -75,7 +102,7 @@ Claude reads the markdown files in `/kb` on every call:
 
 Edit, commit, push. Vercel redeploys.
 
-## 7. If something breaks
+## 8. If something breaks
 
 - "DATABASE_URL is not set": `.env.local` is missing or has a typo. Restart `pnpm dev` after editing it.
 - Sign-in link opens but you land on login with "not on the allowlist": add your exact email to `ALLOWED_EMAILS`.

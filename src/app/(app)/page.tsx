@@ -2,22 +2,26 @@ import Link from "next/link";
 import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { ArrowRight, Megaphone } from "lucide-react";
 import { db } from "@/db/client";
-import { agentRuns, campaigns, people, reviews } from "@/db/schema";
+import { agentRuns, campaigns, candidates, companies, people, reviews } from "@/db/schema";
 import { PageHeader } from "@/components/app/page-header";
 import { Stat } from "@/components/app/stat";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { formatUsd, timeAgo } from "@/lib/utils";
 import { env } from "@/lib/env";
+import { countryName, nicheLabel } from "@/lib/targeting";
 
 export default async function Dashboard() {
   const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
-  const [[leads], [qualified], [pending], [spend], recentCampaigns, recentRuns] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [[leads], [qualified], [pending], [spend], recentCampaigns, recentRuns, due, [cands]] = await Promise.all([
     db.select({ n: count() }).from(people),
     db.select({ n: count() }).from(people).where(sql`${people.tier} in ('A','B')`),
     db.select({ n: count() }).from(reviews).where(eq(reviews.status, "pending")),
     db.select({ usd: sql<string>`coalesce(sum(${agentRuns.costUsd}),0)` }).from(agentRuns).where(gte(agentRuns.createdAt, monthStart)),
     db.select().from(campaigns).orderBy(desc(campaigns.createdAt)).limit(5),
     db.select().from(agentRuns).orderBy(desc(agentRuns.createdAt)).limit(8),
+    db.select({ p: people, company: companies.name }).from(people).leftJoin(companies, eq(companies.id, people.companyId)).where(sql`${people.nextStepDue} <= ${today}`).orderBy(people.nextStepDue).limit(10),
+    db.select({ n: count() }).from(candidates).where(eq(candidates.status, "new")),
   ]);
 
   return (
@@ -29,12 +33,21 @@ export default async function Dashboard() {
           <span className="t-caption">No Claude API key is set, so every generation returns a realistic sample at zero cost. Add ANTHROPIC_API_KEY to go live.</span>
         </div>
       )}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 fade-up">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8 fade-up">
+        <Stat label="Candidates to review" value={cands.n} hint={cands.n ? "Found by the finders, not yet imported" : "Run a finder in a campaign"} />
         <Stat label="Leads" value={leads.n} />
         <Stat label="Qualified (A/B)" value={qualified.n} />
         <Stat label="Awaiting your review" value={pending.n} hint={pending.n ? "Approve or reject in the Review Queue" : "Inbox zero"} />
         <Stat label="Claude spend this month" value={formatUsd(spend.usd)} hint="From the in-app ledger" />
       </div>
+
+      {due.length > 0 && (
+        <section className="card mb-6 overflow-hidden fade-up">
+          <div className="px-6 pt-5 pb-3"><h3 className="h-section">Follow-ups due <span className="t-caption">({due.length})</span></h3></div>
+          <div className="table-wrap"><table className="table"><thead><tr><th>Lead</th><th>Company</th><th>Step</th><th>Due</th></tr></thead>
+            <tbody>{due.map(({ p, company }) => <tr key={p.id}><td className="font-medium"><Link href={`/leads/${p.id}`} className="hover:text-accent">{p.fullName}</Link></td><td>{company}</td><td>Email {p.nextStep}</td><td className={p.nextStepDue! < today ? "text-danger font-medium" : ""}>{p.nextStepDue}</td></tr>)}</tbody></table></div>
+        </section>
+      )}
 
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="card lg:col-span-3 fade-up">
@@ -52,12 +65,12 @@ export default async function Dashboard() {
             </div>
           ) : (
             <div className="table-wrap"><table className="table">
-              <thead><tr><th>Name</th><th>Persona</th><th>Corridor</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Target</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {recentCampaigns.map((c) => (
                   <tr key={c.id}>
                     <td className="font-medium"><Link href={`/campaigns/${c.id}`}>{c.name}</Link></td>
-                    <td>{c.persona}</td><td className="t-mono">{c.corridor}</td>
+                    <td className="t-caption">{[nicheLabel(c.niche ?? "", c.subNiche), c.targetCity ?? countryName(c.targetCountry)].filter(Boolean).join(" → ")}</td>
                     <td><Pill tone={statusTone(c.status)}>{c.status}</Pill></td>
                     <td className="t-caption text-right">{timeAgo(c.createdAt)}</td>
                   </tr>

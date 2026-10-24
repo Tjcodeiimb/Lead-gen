@@ -86,6 +86,14 @@ export function mockCopy(lead: { firstName: string; company: string; market: str
       subject: `re: ${m} launch`,
       body: `${lead.firstName}, one more data point: the decisions before a country-manager hire (city, channel, partner, price) are the hardest to reverse later. Happy to send the pulse either way.`,
     },
+    follow_up_2: {
+      subject: `re: ${m} launch`,
+      body: `${lead.firstName}, a founder we worked with repositioned for a new market's shoppers and reported higher brand trust within a quarter. If ${lead.company} is choosing city, channel or partner this quarter, a four-week sprint answers that with a 24-month P&L. Worth 20 minutes?`,
+    },
+    close: {
+      subject: `re: ${m} launch`,
+      body: `${lead.firstName}, closing the loop. If ${lead.market} comes back on the agenda, the two-page pulse is yours whenever it's useful. Thanks for reading.`,
+    },
     linkedin_note: `Hi ${lead.firstName}, saw ${lead.company}'s ${lead.market} move. I research how brands build trust with new shoppers there. Happy to share what we're seeing. Would be good to connect.`,
     facts_used: [{ fact: `${lead.company} launched in ${lead.market}`, evidence_id: "E2" }],
     risk_flags: ["Prices omitted: offers.md not yet confirmed."],

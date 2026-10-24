@@ -28,7 +28,9 @@ pnpm db:generate (after editing src/db/schema.ts) · pnpm db:migrate · pnpm db:
 - Server actions: "use server", requireUser() first, write audit_log for user-visible changes, revalidatePath.
 - Pages under src/app/(app) are dynamic (force-dynamic on the layout). Auth gate is src/proxy.ts.
 - Knowledge base lives in /kb (markdown), loaded by src/lib/kb.ts into cached system prompts.
-- Never automate LinkedIn. Never send email from the app. Suppression list is checked on import and approval.
+- Lead finders live in src/lib/finders (claude_web, apollo, signals, hunter) and write to `candidates`; import turns them into people. Each has a mock path.
+- Third-party keys are read via src/lib/integrations/keys.ts (settings table, env wins). Gmail is OAuth compose-scope only (src/lib/gmail).
+- Never automate LinkedIn. Never send email from the app (Gmail drafts only). Suppression list is checked on import and approval.
 
 ## Style
 Keep the Apple-like restraint: one accent colour, pill buttons, cards, generous whitespace, system font stack.

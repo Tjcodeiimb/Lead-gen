@@ -8,7 +8,15 @@ export const CopyPackageSchema = z.object({
   }),
   follow_up: z.object({
     subject: z.string(),
-    body: z.string().describe("Two or three sentences, written as a reply in the same thread, adding one new data point or a smaller ask."),
+    body: z.string().describe("Day 4. Two or three sentences, written as a reply in the same thread, adding one new data point or a smaller ask."),
+  }),
+  follow_up_2: z.object({
+    subject: z.string(),
+    body: z.string().describe("Day 9. Two or three sentences as a reply: a permitted proof point or a relevant example with a number, and the same small ask."),
+  }),
+  close: z.object({
+    subject: z.string(),
+    body: z.string().describe("Day 18. One or two sentences. A gracious close that leaves the door open and offers the free pulse. No ask."),
   }),
   linkedin_note: z.string().describe("Under 300 characters. No pitch, no price."),
   facts_used: z.array(z.object({ fact: z.string(), evidence_id: z.string() })),

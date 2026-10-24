@@ -39,13 +39,19 @@ ${loadKb()}
 Return only JSON matching the schema.`;
 }
 
-export function campaignUserPrompt(input: { name: string; persona: string; corridor: string; offer: string; goal?: string | null; notes?: string | null; today: string }) {
+export function campaignUserPrompt(input: { name: string; persona: string; corridor: string; offer: string; goal?: string | null; notes?: string | null; today: string; target?: { niche: string; keywords: string[]; companyLocation: string; targetMarket: string; sizes: string[]; titles: string[] } }) {
   return `TODAY: ${input.today}
 <campaign>
 name: ${input.name}
 persona: ${input.persona}
 corridor: ${input.corridor}
 primary_offer: ${input.offer}
+niche: ${input.target?.niche ?? "(not set)"}
+keywords: ${input.target?.keywords.join(", ") ?? ""}
+companies_based_in: ${input.target?.companyLocation ?? ""}
+entering_market: ${input.target?.targetMarket ?? ""}
+company_size_employees: ${input.target?.sizes.map((x) => x.replace(",", " to ")).join(" or ") ?? "any"}
+roles_to_reach: ${input.target?.titles.join(", ") ?? ""}
 goal: ${input.goal ?? "book qualified discovery calls"}
 founder_notes: ${input.notes ?? "(none)"}
 </campaign>

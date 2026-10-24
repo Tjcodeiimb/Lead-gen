@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Megaphone, Users, CheckSquare, Settings, LogOut } from "lucide-react";
+import { LayoutGrid, Megaphone, Users, CheckSquare, Settings, LogOut, Plug } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 
 const NAV = [
@@ -9,7 +9,8 @@ const NAV = [
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/review", label: "Review Queue", icon: CheckSquare },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings/integrations", label: "Integrations", icon: Plug },
+  { href: "/settings", label: "Settings", icon: Settings, exact: true },
 ];
 
 export function Sidebar({ email, pendingReviews, inline }: { email: string; pendingReviews: number; inline?: boolean }) {

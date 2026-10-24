@@ -23,3 +23,15 @@ export async function deleteDemoData(): Promise<{ people: number; companies: num
   revalidatePath("/"); revalidatePath("/leads"); revalidatePath("/campaigns"); revalidatePath("/settings");
   return { people: p.length, companies: c.length, campaigns: k.length };
 }
+
+export async function saveIntegrationKey(key: string, value: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireUser();
+  const { INTEGRATIONS } = await import("@/lib/integrations/keys");
+  if (!INTEGRATIONS.some((i) => i.key === key)) return { ok: false, error: "Unknown key" };
+  const v = value.trim();
+  if (!v) return { ok: false, error: "Paste a key first" };
+  await db.insert(settings).values({ key, value: v }).onConflictDoUpdate({ target: settings.key, set: { value: v } });
+  await db.insert(auditLog).values({ actor: `user:${user.email}`, action: "integration.key_saved", details: { key } });
+  revalidatePath("/settings/integrations");
+  return { ok: true };
+}

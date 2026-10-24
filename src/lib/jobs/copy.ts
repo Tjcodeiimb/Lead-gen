@@ -76,10 +76,16 @@ Write the outreach package. Use the schema.`,
 
   const flags = qaFlags(output.email.subject, output.email.body, output.linkedin_note, output.facts_used, validIds);
   await db.update(messages).set({ status: "superseded" }).where(eq(messages.personId, p.id));
+  const fu = (step: number, day: number, m: { subject: string; body: string }) => ({
+    personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email" as const, step, dayOffset: day, subject: m.subject, body: m.body,
+    qaFlags: [countSentences(emailCore(m.body)) > 3 ? "follow_up_over_3_sentences" : "", /just (bumping|checking in|following up)/i.test(m.body) ? "empty_follow_up" : ""].filter(Boolean),
+  });
   await db.insert(messages).values([
-    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 1, subject: output.email.subject, body: output.email.body, factsUsed: output.facts_used, qaFlags: flags },
-    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 2, subject: output.follow_up.subject, body: output.follow_up.body, qaFlags: [countSentences(emailCore(output.follow_up.body)) > 3 ? "follow_up_over_3_sentences" : "", /just (bumping|checking in|following up)/i.test(output.follow_up.body) ? "empty_follow_up" : ""].filter(Boolean) },
-    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "linkedin", step: 1, subject: null, body: output.linkedin_note, qaFlags: output.linkedin_note.length > 300 ? ["linkedin_over_300_chars"] : [] },
+    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "email", step: 1, dayOffset: 0, subject: output.email.subject, body: output.email.body, factsUsed: output.facts_used, qaFlags: flags },
+    fu(2, 4, output.follow_up),
+    fu(3, 9, output.follow_up_2),
+    fu(4, 18, output.close),
+    { personId: p.id, campaignId: p.campaignId, agentRunId: runId, channel: "linkedin", step: 1, dayOffset: 1, subject: null, body: output.linkedin_note, qaFlags: output.linkedin_note.length > 300 ? ["linkedin_over_300_chars"] : [] },
   ]);
   await db.update(reviews).set({ status: "superseded" }).where(eq(reviews.personId, p.id));
   await db.insert(reviews).values({ personId: p.id, kind: "lead_package", priority: p.tier === "A" ? 90 : 50 });

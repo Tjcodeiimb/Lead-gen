@@ -6,7 +6,10 @@ import { campaigns, companies, evidence, messages, people, scores } from "@/db/s
 import { PageHeader } from "@/components/app/page-header";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { WEIGHTS } from "@/lib/claude/scoring";
+import { env } from "@/lib/env";
 import { LeadActions } from "./actions";
+import { Sequence } from "./sequence";
+import { getAllKeyStatus, getJsonSetting } from "@/lib/integrations/keys";
 
 const LABELS: Record<string, string> = {
   C1_firmographic_fit: "Firmographic fit", C2_expansion_intent: "Expansion intent", C3_buyer_role: "Buyer role", C4_timing: "Timing",
@@ -28,6 +31,7 @@ export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
     p.companyId ? db.select().from(evidence).where(eq(evidence.companyId, p.companyId)) : Promise.resolve([]),
     db.select().from(messages).where(eq(messages.personId, id)).orderBy(desc(messages.createdAt)),
   ]);
+  const [keys, google] = await Promise.all([getAllKeyStatus(), getJsonSetting<{ email?: string }>("google_oauth")]);
   const co = coRows[0] ?? null;
   const camp = campRows[0] ?? null;
   const score = scoreRows[0];
@@ -69,24 +73,10 @@ export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
             )}
           </section>
 
-          {current.length > 0 && (
-            <section className="card p-6">
-              <h3 className="h-section mb-4">Outreach drafts</h3>
-              <div className="space-y-4">
-                {current.map((m) => (
-                  <div key={m.id} className="rounded-xl border border-line bg-surface-2 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2"><Pill tone={m.channel === "email" ? "accent" : "neutral"}>{m.channel} · step {m.step}</Pill><Pill tone={statusTone(m.status)}>{m.status.replace("_", " ")}</Pill></div>
-                      {(m.qaFlags ?? []).map((f) => <Pill key={f} tone="warning">{f}</Pill>)}
-                    </div>
-                    {m.subject && <div className="text-[14px] font-medium mb-1">{m.subject}</div>}
-                    <pre className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed">{m.body}</pre>
-                  </div>
-                ))}
-              </div>
-              {p.status === "in_review" && <p className="t-caption mt-3">These are waiting in the <Link href="/review" className="text-accent">Review Queue</Link>.</p>}
-            </section>
-          )}
+          <Sequence personId={p.id} email={p.email} status={p.status} nextStep={p.nextStep} nextStepDue={p.nextStepDue}
+            messages={current.map((m) => ({ id: m.id, channel: m.channel, step: m.step, dayOffset: m.dayOffset, subject: m.subject, body: m.body, status: m.status, qaFlags: m.qaFlags ?? [], sentAt: m.sentAt, gmailDraftId: m.gmailDraftId }))}
+            gmailConnected={Boolean(google?.email)} hunterReady={keys.hunter_api_key.set || env.claudeMode === "mock"} />
+          {p.status === "in_review" && <p className="t-caption -mt-3">Drafts are waiting in the <Link href="/review" className="text-accent">Review Queue</Link>.</p>}
 
           <section className="card p-6">
             <h3 className="h-section mb-3">Evidence ledger <span className="t-caption">({ev.length})</span></h3>
