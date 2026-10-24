@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { env, isConfigured } from "@/lib/env";
+import { isMock } from "@/lib/claude/client";
 import { ensureMigrated } from "@/db/migrate";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export async function GET() {
     supabase_key: env.supabaseAnonKey ? "set" : "MISSING",
     database_url: env.databaseUrl ? "set" : "MISSING",
     allowed_emails: env.allowedEmails.length ? `${env.allowedEmails.length} address(es)` : "EMPTY (nobody can sign in)",
-    claude: env.claudeMode,
+    claude: (await isMock()) ? "mock" : "live",
   };
   let db = "not checked";
   let migrations = "not checked";

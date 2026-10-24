@@ -298,6 +298,17 @@ export const candidates = pgTable("candidates", {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("candidates_dedupe").on(t.dedupeKey), index("candidates_campaign_status").on(t.campaignId, t.status)]);
 
+/* ---------- third-party provider calls (for monthly usage meters and auto-switch) ---------- */
+export const providerCalls = pgTable("provider_calls", {
+  id: pk(),
+  provider: text("provider").notNull(),                   // hunter | anymailfinder | prospeo | apollo | reoon | theirstack | claude ...
+  action: text("action").notNull(),                       // find_email | verify_email | reveal | search | test
+  ok: boolean("ok").notNull(),
+  charged: boolean("charged").notNull().default(true),   // did this call consume a credit?
+  note: text("note"),
+  createdAt: createdAt(),
+}, (t) => [index("provider_calls_provider_time").on(t.provider, t.createdAt)]);
+
 /* ---------- types shared with the UI ---------- */
 export type CampaignBrief = {
   positioning: string;

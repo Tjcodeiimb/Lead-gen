@@ -13,7 +13,8 @@ research, score and draft outreach, then approve every message yourself in a key
 |---|---|
 | Email and password sign-in with an email allowlist, change password in Settings | ✅ |
 | Campaign targeting: niche, sub-niche, company city, target city, size, roles | ✅ |
-| Lead finders: Claude web research, Apollo (free search + 1-credit reveal), expansion signals (GDELT news, TheirStack jobs, Companies House), Hunter email finder | ✅ |
+| Lead finders: Claude web research, Apollo (free search + 1-credit reveal), expansion signals (GDELT news, TheirStack jobs, Companies House), email finder waterfall (Hunter → Anymailfinder → Prospeo → Apollo) with verifier (Reoon → Hunter), monthly meters and auto-switch | ✅ |
+| Claude key pasted in-app with a Test button; mock mode until a key exists | ✅ |
 | Candidate holding area → tick and import; duplicates and suppressed skipped | ✅ |
 | Claude writes the campaign plan: positioning, ICP, signals, subject lines, sequence, objections | ✅ |
 | Lead import from CSV (auto column matching, dedupe, suppression check, lawful-basis capture) and manual add | ✅ |

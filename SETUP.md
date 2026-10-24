@@ -47,12 +47,12 @@ Things to try in mock mode (everything returns samples until you add a Claude ke
 - Open a lead → **Research, qualify and draft**. Approve in **Review Queue**. Then on the lead's Sequence, send each step and mark it sent; the dashboard shows what's due.
 - **Settings**: the kill switch and monthly budget.
 
-## 4. Go live with Claude
+## 4. Go live with Claude (in the browser, no files)
 
-1. Go to https://platform.claude.com → **API keys** → create a key in a workspace named `upforge-prod`. Set a monthly **spend limit** on that workspace (start with $200).
-2. If you are on Max: Settings → Billing → **API credits → Link organization**, so your monthly Max credits pay first.
-3. In `.env.local` set `ANTHROPIC_API_KEY=sk-ant-...` and `CLAUDE_MODE=live`. Restart `pnpm dev`.
-4. Also make sure web search is enabled for your organisation in Console → Settings → Capabilities.
+1. In the app, open **Integrations**. The first card is **Claude API key**; click **How to get this key** for the exact clicks.
+2. Paste the key and click **Test**. A green "Key works" means you are live. The yellow mock banner disappears.
+3. Set a monthly spend limit on the workspace in the Claude Console, and the matching budget under **Settings**.
+4. Make sure web search is enabled for your organisation in Console → Settings → Capabilities.
 
 What a lead costs live (list prices, Oct 2026): research with 5 web searches ≈ $0.15, qualification ≈ $0.03, copy on Opus ≈ $0.20. About $0.40 per lead end to end; research is cached per company for 30 days.
 
@@ -67,15 +67,20 @@ What a lead costs live (list prices, Oct 2026): research with 5 web searches ≈
 
 Open **Integrations** in the app's sidebar. Each finder needs a free account and its key. Paste the key into the box and click Save.
 
-| Finder | Create the free account | Where the key is |
-|---|---|---|
-| Claude web research | Nothing to do. Uses your Claude API key. | — |
-| Apollo | https://www.apollo.io/sign-up (free plan) | Settings → Integrations → API → Create new key. Tick "Master API key". |
-| Expansion signals: job posts | https://theirstack.com (free plan, 200 credits/month) | Settings → API keys |
-| Expansion signals: UK registry | https://developer.company-information.service.gov.uk → Register → Create an application → REST key | Shown on the application page |
-| Hunter (find emails) | https://hunter.io/users/sign_up (free plan) | https://hunter.io/api-keys |
+Every card has a **How to get this key** section with the exact clicks. Summary:
 
-News signals need no key.
+| Service | What it does | Free plan |
+|---|---|---|
+| Claude web research | Finds companies and people on the web | Uses your Claude credits, no account needed |
+| Hunter | Email finder and verifier | 25 finds, 50 checks a month |
+| Anymailfinder | Email finder, charges only on success | Trial credits |
+| Prospeo | Email finder | Monthly free credits |
+| Apollo | People search (free) and email reveal | 75 reveals a month |
+| Reoon | Email verifier | About 20 checks a day |
+| TheirStack | Companies hiring in your target market | 200 credits a month |
+| Companies House | New UK companies | Free |
+
+**Auto-switch.** Email finders are tried in order (Hunter, Anymailfinder, Prospeo, Apollo). When one reaches its monthly limit or reports "quota exceeded", the app moves to the next one on its own and shows "limit reached, auto-switched" on its meter. You can change the order on the Integrations page. News signals need no key.
 
 ### Gmail drafts (optional, about 15 minutes once)
 

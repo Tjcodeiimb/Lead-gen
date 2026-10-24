@@ -26,15 +26,16 @@ export async function researchCompany(companyId: string, lead: { fullName: strin
   if (fresh) return db.select().from(evidence).where(eq(evidence.companyId, companyId));
 
   const started = Date.now();
+  const mock = await isMock();
   const [run] = await db.insert(agentRuns).values({
     jobType: "research", subjectType: "company", subjectId: companyId, status: "running",
-    model: MODELS.sonnet, effort: "medium", promptVersion: RESEARCH_PROMPT_VERSION, mode: isMock() ? "mock" : "live",
+    model: MODELS.sonnet, effort: "medium", promptVersion: RESEARCH_PROMPT_VERSION, mode: mock ? "mock" : "live",
   }).returning({ id: agentRuns.id });
 
   let rows: EvidenceRow[] = [];
   let costUsd = 0;
   try {
-    if (isMock()) {
+    if (mock) {
       await new Promise((r) => setTimeout(r, 800));
       rows = mockEvidence(co.name, co.domain);
     } else {
@@ -53,7 +54,7 @@ export async function researchCompany(companyId: string, lead: { fullName: strin
       let res;
       for (let i = 0; i < 4; i++) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res = await claude().messages.create({ ...req, messages: messages as any });
+        res = await (await claude()).messages.create({ ...req, messages: messages as any });
         costUsd += costFromUsage(MODELS.sonnet, res.usage).usd;
         if (res.stop_reason !== "pause_turn") break;
         messages = [...messages, { role: "assistant", content: res.content }];

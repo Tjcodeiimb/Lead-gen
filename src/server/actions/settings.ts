@@ -35,3 +35,32 @@ export async function saveIntegrationKey(key: string, value: string): Promise<{ 
   revalidatePath("/settings/integrations");
   return { ok: true };
 }
+
+export async function testClaude(key?: string): Promise<{ ok: true; model: string } | { ok: false; error: string }> {
+  await requireUser();
+  const { testClaudeKey, getClaudeKey } = await import("@/lib/claude/client");
+  const k = key || (await getClaudeKey());
+  if (!k) return { ok: false, error: "Paste a key first." };
+  const r = await testClaudeKey(k);
+  if (r.ok) { const { recordCall } = await import("@/lib/integrations/keys"); await recordCall("claude", "test", true, false); }
+  return r;
+}
+
+export async function setProviderLimit(key: string, limit: number) {
+  await requireUser();
+  const { providerOf, setJsonSetting } = await import("@/lib/integrations/keys");
+  await setJsonSetting(`limit:${providerOf(key as never)}`, Math.max(0, Math.floor(limit)));
+  revalidatePath("/settings/integrations");
+}
+
+export async function setProviderOrder(settingKey: string, value: string, allowed: string[]): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireUser();
+  if (!["email_finder_order", "email_verifier_order"].includes(settingKey)) return { ok: false, error: "Unknown setting" };
+  const list = value.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const bad = list.filter((x) => !allowed.includes(x));
+  if (bad.length) return { ok: false, error: `Unknown provider: ${bad.join(", ")}. Allowed: ${allowed.join(", ")}` };
+  const { setJsonSetting } = await import("@/lib/integrations/keys");
+  await setJsonSetting(settingKey, list);
+  revalidatePath("/settings/integrations");
+  return { ok: true };
+}

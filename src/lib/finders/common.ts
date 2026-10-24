@@ -74,7 +74,7 @@ export function describeTarget(c: Campaign) {
   };
 }
 
-export const mockMode = () => isMock();
+export const mockMode = () => isMock();  // async
 
 export async function campaignOrThrow(campaignId: string) {
   const [c] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));

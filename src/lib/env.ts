@@ -15,7 +15,8 @@ export const env = {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  claudeMode: (process.env.CLAUDE_MODE ?? (process.env.ANTHROPIC_API_KEY ? "live" : "mock")) as "live" | "mock",
+  // Display hint only; the real decision is isMock() in lib/claude/client.ts, which also checks the key saved in Settings.
+  claudeModeHint: (process.env.CLAUDE_MODE ?? (process.env.ANTHROPIC_API_KEY ? "live" : "mock")) as "live" | "mock",
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
 };
 

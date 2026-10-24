@@ -49,13 +49,14 @@ export async function assertLlmAllowed() {
 export async function runJob<S extends z.ZodType>(o: RunJobOptions<S>): Promise<{ output: z.infer<S>; runId: string; costUsd: number }> {
   await assertLlmAllowed();
   const started = Date.now();
+  const mock = await isMock();
   const [run] = await db.insert(agentRuns).values({
     jobType: o.jobType, subjectType: o.subjectType, subjectId: o.subjectId, status: "running",
-    model: o.model, effort: o.effort ?? null, promptVersion: o.promptVersion, mode: isMock() ? "mock" : "live",
+    model: o.model, effort: o.effort ?? null, promptVersion: o.promptVersion, mode: mock ? "mock" : "live",
     input: { system_chars: o.system.length, user: o.user.slice(0, 20_000) },
   }).returning({ id: agentRuns.id });
 
-  if (isMock()) {
+  if (mock) {
     await new Promise((r) => setTimeout(r, 600));
     const output = o.schema.parse(o.mock()) as z.infer<S>;
     await db.update(agentRuns).set({ status: "succeeded", output, stopReason: "mock", latencyMs: Date.now() - started, costUsd: "0" }).where(eq(agentRuns.id, run.id));
@@ -63,7 +64,7 @@ export async function runJob<S extends z.ZodType>(o: RunJobOptions<S>): Promise<
   }
 
   try {
-    const res = await claude().messages.parse({
+    const res = await (await claude()).messages.parse({
       model: o.model,
       max_tokens: o.maxTokens ?? 4000,
       system: [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }],

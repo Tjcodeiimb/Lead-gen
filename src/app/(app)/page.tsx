@@ -7,10 +7,11 @@ import { PageHeader } from "@/components/app/page-header";
 import { Stat } from "@/components/app/stat";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { formatUsd, timeAgo } from "@/lib/utils";
-import { env } from "@/lib/env";
+import { isMock } from "@/lib/claude/client";
 import { countryName, nicheLabel } from "@/lib/targeting";
 
 export default async function Dashboard() {
+  const mock = await isMock();
   const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
   const today = new Date().toISOString().slice(0, 10);
   const [[leads], [qualified], [pending], [spend], recentCampaigns, recentRuns, due, [cands]] = await Promise.all([
@@ -27,10 +28,10 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader title="Good to see you." description="Here's where the pipeline stands. Everything outbound waits for your approval." />
-      {env.claudeMode === "mock" && (
+      {mock && (
         <div className="card p-4 mb-6 flex items-center gap-3 fade-up">
           <Pill tone="warning">Mock mode</Pill>
-          <span className="t-caption">No Claude API key is set, so every generation returns a realistic sample at zero cost. Add ANTHROPIC_API_KEY to go live.</span>
+          <span className="t-caption">No Claude API key yet, so every generation returns a realistic sample at zero cost. Paste your key on the Integrations page to go live.</span>
         </div>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8 fade-up">

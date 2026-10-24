@@ -1,59 +1,71 @@
-import { PageHeader } from "@/components/app/page-header";
-import { INTEGRATIONS, getAllKeyStatus, getJsonSetting } from "@/lib/integrations/keys";
-import { KeyForm } from "./key-form";
-import { Pill } from "@/components/ui/pill";
 import Link from "next/link";
+import { PageHeader } from "@/components/app/page-header";
+import { INTEGRATIONS, getAllKeyStatus, getJsonSetting, providerOf, usageSummary } from "@/lib/integrations/keys";
+import { isMock } from "@/lib/claude/client";
+import { FINDER_ORDER_DEFAULT, VERIFIER_ORDER_DEFAULT } from "@/lib/finders/email";
+import { Pill } from "@/components/ui/pill";
+import { KeyCard } from "./key-card";
 import { Notice } from "./notice";
+import { OrderForm } from "./order-form";
+
+const GROUPS: { id: (typeof INTEGRATIONS)[number]["group"]; title: string; blurb: string }[] = [
+  { id: "claude", title: "Claude", blurb: "The only key you really need. Everything else is optional." },
+  { id: "email_finder", title: "Email finders (auto-switch)", blurb: "Tried in order. When one runs out for the month, the next one is used automatically." },
+  { id: "email_verifier", title: "Email verifiers", blurb: "Checks an address before you send, so bounces stay low." },
+  { id: "lead_source", title: "Lead sources", blurb: "Used by the Find leads tab on a campaign." },
+];
 
 export default async function IntegrationsPage({ searchParams }: PageProps<"/settings/integrations">) {
   const sp = await searchParams;
-  const status = await getAllKeyStatus();
-  const google = await getJsonSetting<{ email?: string }>("google_oauth");
+  const [status, usage, google, mock, finderOrder, verifierOrder] = await Promise.all([
+    getAllKeyStatus(), usageSummary(), getJsonSetting<{ email?: string }>("google_oauth"), isMock(),
+    getJsonSetting<string[]>("email_finder_order"), getJsonSetting<string[]>("email_verifier_order"),
+  ]);
   const gmailReady = status.google_client_id.set && status.google_client_secret.set;
+
   return (
     <>
-      <PageHeader title="Integrations" description="Each finder needs a free account and its API key. Paste keys here; they are stored in your database, not in the code." />
+      <PageHeader title="Integrations" description="Every service here has a free plan. Paste a key, follow the steps under each card if you need help, and the meters show what's left this month." />
       <Notice connected={typeof sp.connected === "string" ? sp.connected : undefined} error={typeof sp.error === "string" ? sp.error : undefined} />
-      <div className="grid lg:grid-cols-2 gap-6 fade-up">
-        <div className="space-y-6">
-          {INTEGRATIONS.filter((i) => !i.key.startsWith("google")).map((i) => (
-            <section key={i.key} className="card p-6">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <h3 className="h-section">{i.label}</h3>
-                <Pill tone={status[i.key].set ? "success" : "neutral"}>{status[i.key].set ? (status[i.key].fromEnv ? "set via env" : `set · …${status[i.key].last4}`) : "not set"}</Pill>
-              </div>
-              <p className="t-caption mb-3">{i.help} <a className="text-accent" href={i.link} target="_blank" rel="noreferrer">Get key</a></p>
-              {!status[i.key].fromEnv && <KeyForm settingKey={i.key} />}
-            </section>
-          ))}
-        </div>
-        <div className="space-y-6">
-          <section className="card p-6">
-            <div className="flex items-start justify-between gap-3 mb-1">
-              <h3 className="h-section">Gmail drafts</h3>
-              <Pill tone={google?.email ? "success" : gmailReady ? "warning" : "neutral"}>{google?.email ? `connected · ${google.email}` : gmailReady ? "ready to connect" : "needs client ID"}</Pill>
+
+      <div className="space-y-10 fade-up">
+        {GROUPS.map((g) => (
+          <section key={g.id}>
+            <div className="mb-3"><h2 className="h-title">{g.title}</h2><p className="t-caption">{g.blurb}</p></div>
+            {g.id === "claude" && <div className="mb-3"><Pill tone={mock ? "warning" : "success"}>{mock ? "mock mode: samples only, nothing spent" : "live"}</Pill></div>}
+            <div className="grid md:grid-cols-2 gap-4">
+              {INTEGRATIONS.filter((i) => i.group === g.id).map((i) => (
+                <KeyCard key={i.key} def={{ key: i.key, label: i.label, help: i.help, link: i.link, steps: [...i.steps], unit: "unit" in i ? i.unit : undefined }}
+                  status={status[i.key]} usage={usage[providerOf(i.key)]} testable={i.key === "claude_api_key"} />
+              ))}
             </div>
-            <p className="t-caption mb-4">Approved emails become drafts in your Gmail. One-time setup in Google Cloud, then one click to connect. Steps are in <code className="t-mono">SETUP.md</code>, section 6.</p>
-            {INTEGRATIONS.filter((i) => i.key.startsWith("google")).map((i) => (
-              <div key={i.key} className="mb-4">
-                <div className="flex items-center justify-between mb-1"><span className="text-[13px] font-medium">{i.label}</span><Pill tone={status[i.key].set ? "success" : "neutral"}>{status[i.key].set ? "set" : "not set"}</Pill></div>
-                {!status[i.key].fromEnv && <KeyForm settingKey={i.key} />}
+            {g.id === "email_finder" && (
+              <div className="card p-5 mt-4">
+                <h3 className="h-section mb-1">Order of use</h3>
+                <p className="t-caption mb-3">Comma-separated. Providers without a key are skipped. Default: {FINDER_ORDER_DEFAULT.join(", ")}.</p>
+                <OrderForm settingKey="email_finder_order" value={(finderOrder ?? [...FINDER_ORDER_DEFAULT]).join(", ")} allowed={[...FINDER_ORDER_DEFAULT]} />
+                <p className="t-caption mt-4 mb-2">Verifier order. Default: {VERIFIER_ORDER_DEFAULT.join(", ")}.</p>
+                <OrderForm settingKey="email_verifier_order" value={(verifierOrder ?? [...VERIFIER_ORDER_DEFAULT]).join(", ")} allowed={[...VERIFIER_ORDER_DEFAULT]} />
               </div>
-            ))}
-            {gmailReady && (
-              <Link href="/api/google/connect" className="btn btn-primary">{google?.email ? "Reconnect Google" : "Connect Google"}</Link>
             )}
           </section>
-          <section className="card p-6">
-            <h3 className="h-section mb-2">What each finder costs</h3>
-            <ul className="t-caption space-y-1.5 list-disc pl-4">
-              <li><strong className="text-ink">Claude web research:</strong> about $0.10 to $0.30 per run from your API credits. No account needed.</li>
-              <li><strong className="text-ink">Apollo:</strong> searching is free and unlimited. Revealing a person&apos;s email costs 1 credit; the free plan gives 75 a month.</li>
-              <li><strong className="text-ink">Signals:</strong> news is free with no key. Job posts use TheirStack credits (200 free a month). UK registry is free with a key.</li>
-              <li><strong className="text-ink">Hunter:</strong> 25 email finds and 50 verifications a month on the free plan.</li>
-            </ul>
-          </section>
-        </div>
+        ))}
+
+        <section>
+          <div className="mb-3"><h2 className="h-title">Gmail drafts</h2><p className="t-caption">Approved emails become drafts in your Gmail. The app can create drafts only; it cannot read your mail or send.</p></div>
+          <div className="card p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <span className="text-[14px] font-medium">Connection</span>
+              <Pill tone={google?.email ? "success" : gmailReady ? "warning" : "neutral"}>{google?.email ? `connected · ${google.email}` : gmailReady ? "ready to connect" : "needs client ID and secret"}</Pill>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              {INTEGRATIONS.filter((i) => i.group === "sending").map((i) => (
+                <KeyCard key={i.key} def={{ key: i.key, label: i.label, help: i.help, link: i.link, steps: [...i.steps] }} status={status[i.key]} compact />
+              ))}
+            </div>
+            {gmailReady && <Link href="/api/google/connect" className="btn btn-primary">{google?.email ? "Reconnect Google" : "Connect Google"}</Link>}
+          </div>
+        </section>
       </div>
     </>
   );

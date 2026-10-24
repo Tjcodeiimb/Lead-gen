@@ -57,7 +57,7 @@ export async function runClaudeWebFinder(campaignId: string, opts: { maxSearches
   try {
     let items: CandidateInput[] = [];
     let cost = 0;
-    if (mockMode()) {
+    if (await mockMode()) {
       await new Promise((r) => setTimeout(r, 1200));
       items = mockCandidates(t.keywords[0] ?? "brand", c.companyCity ?? "Mumbai", c.companyCountry ?? "IN", c.targetCity ?? "Dubai");
     } else {
@@ -81,14 +81,14 @@ Find companies and people now.`;
       let res;
       for (let i = 0; i < 4; i++) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res = await claude().messages.create({ ...req, messages: messages as any });
+        res = await (await claude()).messages.create({ ...req, messages: messages as any });
         cost += costFromUsage(MODELS.sonnet, res.usage).usd;
         if (res.stop_reason !== "pause_turn") break;
         messages = [...messages, { role: "assistant", content: res.content }];
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const notes = (res?.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
-      const ex = await claude().messages.parse({
+      const ex = await (await claude()).messages.parse({
         model: MODELS.haiku, max_tokens: 6000,
         system: "Convert the researcher's notes into JSON. Keep only companies that have a COMPANY line. Copy names, titles and URLs exactly; do not add anything that is not in the notes. Use empty strings for unknown fields.",
         messages: [{ role: "user", content: notes || "(no notes)" }],

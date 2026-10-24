@@ -6,7 +6,7 @@ import { campaigns, companies, evidence, messages, people, scores } from "@/db/s
 import { PageHeader } from "@/components/app/page-header";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
 import { WEIGHTS } from "@/lib/claude/scoring";
-import { env } from "@/lib/env";
+import { isMock } from "@/lib/claude/client";
 import { LeadActions } from "./actions";
 import { Sequence } from "./sequence";
 import { getAllKeyStatus, getJsonSetting } from "@/lib/integrations/keys";
@@ -31,7 +31,7 @@ export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
     p.companyId ? db.select().from(evidence).where(eq(evidence.companyId, p.companyId)) : Promise.resolve([]),
     db.select().from(messages).where(eq(messages.personId, id)).orderBy(desc(messages.createdAt)),
   ]);
-  const [keys, google] = await Promise.all([getAllKeyStatus(), getJsonSetting<{ email?: string }>("google_oauth")]);
+  const [keys, google, mock] = await Promise.all([getAllKeyStatus(), getJsonSetting<{ email?: string }>("google_oauth"), isMock()]);
   const co = coRows[0] ?? null;
   const camp = campRows[0] ?? null;
   const score = scoreRows[0];
@@ -75,7 +75,7 @@ export default async function LeadDetail({ params }: PageProps<"/leads/[id]">) {
 
           <Sequence personId={p.id} email={p.email} status={p.status} nextStep={p.nextStep} nextStepDue={p.nextStepDue}
             messages={current.map((m) => ({ id: m.id, channel: m.channel, step: m.step, dayOffset: m.dayOffset, subject: m.subject, body: m.body, status: m.status, qaFlags: m.qaFlags ?? [], sentAt: m.sentAt, gmailDraftId: m.gmailDraftId }))}
-            gmailConnected={Boolean(google?.email)} hunterReady={keys.hunter_api_key.set || env.claudeMode === "mock"} />
+            gmailConnected={Boolean(google?.email)} hunterReady={keys.hunter_api_key.set || keys.anymailfinder_api_key.set || keys.prospeo_api_key.set || keys.apollo_api_key.set || mock} />
           {p.status === "in_review" && <p className="t-caption -mt-3">Drafts are waiting in the <Link href="/review" className="text-accent">Review Queue</Link>.</p>}
 
           <section className="card p-6">

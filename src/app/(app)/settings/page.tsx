@@ -2,7 +2,7 @@ import { desc, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { agentRuns, auditLog, settings } from "@/db/schema";
 import { PageHeader } from "@/components/app/page-header";
-import { env } from "@/lib/env";
+import { isMock } from "@/lib/claude/client";
 import { Pill } from "@/components/ui/pill";
 import { formatUsd, timeAgo } from "@/lib/utils";
 import { DemoDataButton, SettingsForm } from "./form";
@@ -14,6 +14,7 @@ export default async function SettingsPage() {
   const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
   const [spend] = await db.select({ usd: sql<string>`coalesce(sum(${agentRuns.costUsd}),0)`, n: sql<number>`count(*)` }).from(agentRuns).where(gte(agentRuns.createdAt, monthStart));
   const audit = await db.select().from(auditLog).orderBy(desc(auditLog.at)).limit(20);
+  const mock = await isMock();
 
   return (
     <>
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
         <div className="space-y-6">
           <section className="card p-6">
             <h3 className="h-section mb-1">Claude</h3>
-            <p className="t-caption mb-4">Mode: <Pill tone={env.claudeMode === "live" ? "success" : "warning"}>{env.claudeMode}</Pill> · This month: {formatUsd(spend.usd)} across {spend.n} jobs</p>
+            <p className="t-caption mb-4">Mode: <Pill tone={mock ? "warning" : "success"}>{mock ? "mock" : "live"}</Pill> · This month: {formatUsd(spend.usd)} across {spend.n} jobs</p>
             <SettingsForm pauseLlm={map.pause_llm === true} budget={Number(map.monthly_budget_usd ?? 150)} />
           </section>
           <section className="card p-6">

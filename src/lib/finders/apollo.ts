@@ -7,7 +7,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { candidates } from "@/db/schema";
-import { getKey } from "@/lib/integrations/keys";
+import { getKey, isExhausted, markExhausted, recordCall } from "@/lib/integrations/keys";
 import { countryName, roleSeniorities } from "@/lib/targeting";
 import { campaignOrThrow, describeTarget, failRun, finishRun, mockMode, saveCandidates, startRun, type CandidateInput } from "./common";
 
@@ -44,8 +44,8 @@ export async function runApolloFinder(campaignId: string, opts: { perPage?: numb
   const run = await startRun(campaignId, "apollo", query);
   try {
     let items: CandidateInput[] = [];
-    if (mockMode() || !key) {
-      if (!key && !mockMode()) throw new Error("Add your Apollo API key in Settings → Integrations first.");
+    if ((await mockMode()) || !key) {
+      if (!key && !(await mockMode())) throw new Error("Add your Apollo API key in Settings → Integrations first.");
       await new Promise((r) => setTimeout(r, 700));
       items = ["Meera", "Arjun", "Sana", "Vikram", "Nisha"].map((n, i) => ({
         companyName: `${["Aarna", "Bloom", "Cedar", "Dune", "Ember"][i]} Brands (sample)`, companyCountry: c.companyCountry, companyCity: c.companyCity,
@@ -79,12 +79,16 @@ export async function revealApolloCandidate(candidateId: string) {
   if (cand.email) return cand;
   const key = await getKey("apollo_api_key");
   let person: MatchPerson;
-  if (mockMode() || !key) {
-    if (!key && !mockMode()) throw new Error("Add your Apollo API key in Settings → Integrations first.");
+  if ((await mockMode()) || !key) {
+    if (!key && !(await mockMode())) throw new Error("Add your Apollo API key in Settings → Integrations first.");
     const first = cand.firstName ?? "Sample";
     person = { name: `${first} Sharma`, first_name: first, last_name: "Sharma", title: cand.title ?? "Founder", email: `${first.toLowerCase()}@${cand.companyName.toLowerCase().replace(/[^a-z]/g, "")}.example`, email_status: "verified", linkedin_url: `https://www.linkedin.com/in/${first.toLowerCase()}-sharma`, organization: { name: cand.companyName, primary_domain: `${cand.companyName.toLowerCase().replace(/[^a-z]/g, "")}.example`, estimated_num_employees: 120, industry: cand.industry ?? undefined } };
   } else {
-    const data = await apollo<{ person?: MatchPerson }>("people/match", { id: cand.externalId ?? undefined, reveal_personal_emails: false }, key);
+    if (await isExhausted("apollo")) throw new Error("Apollo's 75 free reveals for this month are used up. The Integrations page shows the meter.");
+    let data: { person?: MatchPerson };
+    try { data = await apollo<{ person?: MatchPerson }>("people/match", { id: cand.externalId ?? undefined, reveal_personal_emails: false }, key); }
+    catch (e) { if (/rate limit|402/i.test(String(e))) await markExhausted("apollo"); throw e; }
+    await recordCall("apollo", "reveal", Boolean(data.person?.email), Boolean(data.person));
     if (!data.person) throw new Error("Apollo found no match for this person.");
     person = data.person;
   }

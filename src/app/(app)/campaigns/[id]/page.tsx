@@ -10,7 +10,7 @@ import { FindLeads } from "./find-leads";
 import { RowLink } from "@/components/app/row-link";
 import { candidateCounts, describeTarget } from "@/lib/finders/common";
 import { getAllKeyStatus } from "@/lib/integrations/keys";
-import { env } from "@/lib/env";
+import { isMock } from "@/lib/claude/client";
 import { Upload } from "lucide-react";
 
 // Finders and plan generation can take 1-3 minutes.
@@ -21,12 +21,13 @@ export default async function CampaignDetail({ params, searchParams }: PageProps
   const sp = await searchParams;
   const [c] = await db.select().from(campaigns).where(eq(campaigns.id, id));
   if (!c) notFound();
-  const [leads, cands, runs, counts, keys] = await Promise.all([
+  const [leads, cands, runs, counts, keys, mock] = await Promise.all([
     db.select().from(people).where(eq(people.campaignId, id)).orderBy(desc(people.createdAt)).limit(100),
     db.select().from(candidates).where(and(eq(candidates.campaignId, id), eq(candidates.status, "new"))).orderBy(desc(candidates.confidence), desc(candidates.createdAt)).limit(200),
     db.select().from(finderRuns).where(eq(finderRuns.campaignId, id)).orderBy(desc(finderRuns.startedAt)).limit(10),
     candidateCounts(id),
     getAllKeyStatus(),
+    isMock(),
   ]);
   const t = describeTarget(c);
   const b = c.brief;
@@ -52,8 +53,8 @@ export default async function CampaignDetail({ params, searchParams }: PageProps
 
       {tab === "find" && (
         <FindLeads campaignId={c.id} candidates={cands} runs={runs} counts={counts}
-          keys={{ apollo: keys.apollo_api_key.set, hunter: keys.hunter_api_key.set, theirstack: keys.theirstack_api_key.set, companiesHouse: keys.companies_house_api_key.set }}
-          mock={env.claudeMode === "mock"} />
+          keys={{ apollo: keys.apollo_api_key.set, hunter: keys.hunter_api_key.set || keys.anymailfinder_api_key.set || keys.prospeo_api_key.set, theirstack: keys.theirstack_api_key.set, companiesHouse: keys.companies_house_api_key.set }}
+          mock={mock} />
       )}
 
       {tab === "leads" && (

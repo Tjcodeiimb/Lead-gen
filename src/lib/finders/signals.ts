@@ -22,7 +22,7 @@ export async function runSignalsFinder(campaignId: string) {
   try {
     let items: CandidateInput[] = [];
     let credits = 0;
-    if (mockMode()) {
+    if (await mockMode()) {
       await new Promise((r) => setTimeout(r, 900));
       items = [
         { companyName: "Lumen Skincare (sample)", companyCountry: c.companyCountry, signal: `Press: "Lumen Skincare expands to ${target}" (2026-10-12)`, signalUrl: "https://news.example/lumen", confidence: 0.6 },

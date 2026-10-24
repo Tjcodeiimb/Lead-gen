@@ -29,7 +29,7 @@ pnpm db:generate (after editing src/db/schema.ts) · pnpm db:migrate · pnpm db:
 - Pages under src/app/(app) are dynamic (force-dynamic on the layout). Auth gate is src/proxy.ts.
 - Knowledge base lives in /kb (markdown), loaded by src/lib/kb.ts into cached system prompts.
 - Lead finders live in src/lib/finders (claude_web, apollo, signals, hunter) and write to `candidates`; import turns them into people. Each has a mock path.
-- Third-party keys are read via src/lib/integrations/keys.ts (settings table, env wins). Gmail is OAuth compose-scope only (src/lib/gmail).
+- Third-party keys are read via src/lib/integrations/keys.ts (settings table, env wins). Email finding goes through src/lib/finders/email.ts (waterfall with recordCall/isExhausted meters). `claude()` and `isMock()` are async; the key may live in settings. Gmail is OAuth compose-scope only (src/lib/gmail).
 - Never automate LinkedIn. Never send email from the app (Gmail drafts only). Suppression list is checked on import and approval.
 
 ## Style

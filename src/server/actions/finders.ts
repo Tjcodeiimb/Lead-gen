@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { runClaudeWebFinder } from "@/lib/finders/claude-web";
 import { runApolloFinder, revealApolloCandidate } from "@/lib/finders/apollo";
 import { runSignalsFinder } from "@/lib/finders/signals";
-import { findEmailForCandidate, findEmailForPerson } from "@/lib/finders/hunter";
+import { findEmailForCandidate, findEmailForPerson } from "@/lib/finders/email";
 
 type R = { ok: true; found: number; note?: string } | { ok: false; error: string };
 const sha = (s: string) => createHash("sha256").update(s.trim().toLowerCase()).digest("hex");
@@ -34,15 +34,15 @@ export async function revealCandidate(candidateId: string): Promise<{ ok: true }
   catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Unknown error" }; }
 }
 
-export async function findCandidateEmail(candidateId: string): Promise<{ ok: true; email: string | null } | { ok: false; error: string }> {
+export async function findCandidateEmail(candidateId: string): Promise<{ ok: true; email: string | null; note?: string } | { ok: false; error: string }> {
   await requireUser();
-  try { const c = await findEmailForCandidate(candidateId); revalidatePath(`/campaigns/${c.campaignId}`); return { ok: true, email: c.email }; }
+  try { const { row, result } = await findEmailForCandidate(candidateId); revalidatePath(`/campaigns/${row.campaignId}`); return { ok: true, email: row.email, note: result.log.join(" · ") }; }
   catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Unknown error" }; }
 }
 
-export async function findLeadEmail(personId: string): Promise<{ ok: true; email: string | null } | { ok: false; error: string }> {
+export async function findLeadEmail(personId: string): Promise<{ ok: true; email: string | null; note?: string } | { ok: false; error: string }> {
   await requireUser();
-  try { const p = await findEmailForPerson(personId); revalidatePath(`/leads/${personId}`); return { ok: true, email: p.email }; }
+  try { const { row, result } = await findEmailForPerson(personId); revalidatePath(`/leads/${personId}`); return { ok: true, email: row.email, note: result.log.join(" · ") }; }
   catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Unknown error" }; }
 }
 
