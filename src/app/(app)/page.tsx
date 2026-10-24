@@ -6,6 +6,7 @@ import { agentRuns, campaigns, candidates, companies, people, reviews } from "@/
 import { PageHeader } from "@/components/app/page-header";
 import { Stat } from "@/components/app/stat";
 import { Pill, statusTone, tierTone } from "@/components/ui/pill";
+import { guarded, val } from "@/lib/guarded";
 import { formatUsd, timeAgo } from "@/lib/utils";
 import { isMock } from "@/lib/claude/client";
 import { countryName, nicheLabel } from "@/lib/targeting";
@@ -14,20 +15,36 @@ export default async function Dashboard() {
   const mock = await isMock();
   const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
   const today = new Date().toISOString().slice(0, 10);
-  const [[leads], [qualified], [pending], [spend], recentCampaigns, recentRuns, due, [cands]] = await Promise.all([
-    db.select({ n: count() }).from(people),
-    db.select({ n: count() }).from(people).where(sql`${people.tier} in ('A','B')`),
-    db.select({ n: count() }).from(reviews).where(eq(reviews.status, "pending")),
-    db.select({ usd: sql<string>`coalesce(sum(${agentRuns.costUsd}),0)` }).from(agentRuns).where(gte(agentRuns.createdAt, monthStart)),
-    db.select().from(campaigns).orderBy(desc(campaigns.createdAt)).limit(5),
-    db.select().from(agentRuns).orderBy(desc(agentRuns.createdAt)).limit(8),
-    db.select({ p: people, company: companies.name }).from(people).leftJoin(companies, eq(companies.id, people.companyId)).where(sql`${people.nextStepDue} <= ${today}`).orderBy(people.nextStepDue).limit(10),
-    db.select({ n: count() }).from(candidates).where(eq(candidates.status, "new")),
-  ]);
+  const g = await Promise.all([
+    guarded("leads count", () => db.select({ n: count() }).from(people)),
+    guarded("qualified count", () => db.select({ n: count() }).from(people).where(sql`${people.tier} in ('A','B')`)),
+    guarded("pending reviews", () => db.select({ n: count() }).from(reviews).where(eq(reviews.status, "pending"))),
+    guarded("month spend", () => db.select({ usd: sql<string>`coalesce(sum(${agentRuns.costUsd}),0)` }).from(agentRuns).where(gte(agentRuns.createdAt, monthStart))),
+    guarded("recent campaigns", () => db.select().from(campaigns).orderBy(desc(campaigns.createdAt)).limit(5)),
+    guarded("recent runs", () => db.select().from(agentRuns).orderBy(desc(agentRuns.createdAt)).limit(8)),
+    guarded("follow-ups due", () => db.select({ p: people, company: companies.name }).from(people).leftJoin(companies, eq(companies.id, people.companyId)).where(sql`${people.nextStepDue} <= ${today}::date`).orderBy(people.nextStepDue).limit(10)),
+    guarded("candidates count", () => db.select({ n: count() }).from(candidates).where(eq(candidates.status, "new"))),
+  ] as const);
+  const [leads] = val(g[0], [{ n: 0 }]);
+  const [qualified] = val(g[1], [{ n: 0 }]);
+  const [pending] = val(g[2], [{ n: 0 }]);
+  const [spend] = val(g[3], [{ usd: "0" }]);
+  const recentCampaigns = val(g[4], []);
+  const recentRuns = val(g[5], []);
+  const due = val(g[6], []);
+  const [cands] = val(g[7], [{ n: 0 }]);
+  const problems = g.filter((x) => !x.ok).map((x) => (x as { error: string }).error);
+  const slowest = Math.max(...g.map((x) => x.ms));
 
   return (
     <>
       <PageHeader title="Good to see you." description="Here's where the pipeline stands. Everything outbound waits for your approval." />
+      {problems.length > 0 && (
+        <div className="card p-4 mb-6 border-danger/40 fade-up">
+          <div className="text-[14px] font-medium text-danger mb-1">Some parts of this page could not load</div>
+          <ul className="t-caption list-disc pl-4">{problems.map((p) => <li key={p}>{p}</li>)}</ul>
+        </div>
+      )}
       {mock && (
         <div className="card p-4 mb-6 flex items-center gap-3 fade-up">
           <Pill tone="warning">Mock mode</Pill>
@@ -100,7 +117,7 @@ export default async function Dashboard() {
           )}
         </div>
       </div>
-      <div className="mt-6 t-caption">Tier legend: <Pill tone={tierTone("A")}>A</Pill> call now · <Pill tone={tierTone("B")}>B</Pill> nurture or research · <Pill tone={tierTone("C")}>C</Pill> monitor · <Pill tone={tierTone("DQ")}>DQ</Pill> archive</div>
+      <div className="mt-6 t-caption">Slowest query on this page: {slowest} ms · Tier legend: <Pill tone={tierTone("A")}>A</Pill> call now · <Pill tone={tierTone("B")}>B</Pill> nurture or research · <Pill tone={tierTone("C")}>C</Pill> monitor · <Pill tone={tierTone("DQ")}>DQ</Pill> archive</div>
     </>
   );
 }
