@@ -7,6 +7,7 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 declare global {
   var __upforgeDb: Db | undefined;
+  var __sqlCount: number | undefined;
 }
 
 function connect(): Db {
@@ -25,6 +26,8 @@ function connect(): Db {
     connect_timeout: 10,
     // TCP keepalive every 10s so home/office routers don't silently kill the socket.
     keep_alive: 10,
+    // DEBUG_SQL=1 prints every query with its timing, handy for finding slow pages.
+    ...(process.env.DEBUG_SQL ? { debug: (_c: number, q: string) => { globalThis.__sqlCount = (globalThis.__sqlCount ?? 0) + 1; if (process.env.DEBUG_SQL === "2") console.log("[sql]", q.slice(0, 80)); } } : {}),
   });
   return drizzle(withReadRetry(client), { schema });
 }

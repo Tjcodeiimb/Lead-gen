@@ -9,7 +9,7 @@ import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { agentRuns, settings } from "@/db/schema";
+import { agentRuns } from "@/db/schema";
 import { claude, isMock } from "./client";
 import { costFromUsage } from "./pricing";
 import type { Effort, ModelId } from "./models";
@@ -31,10 +31,10 @@ export type RunJobOptions<S extends z.ZodType> = {
 };
 
 export async function assertLlmAllowed() {
-  const [pause] = await db.select().from(settings).where(eq(settings.key, "pause_llm"));
-  if (pause?.value === true) throw new Error("LLM jobs are paused (Settings → Kill switches).");
-  const [budget] = await db.select().from(settings).where(eq(settings.key, "monthly_budget_usd"));
-  const limit = Number(budget?.value ?? 0);
+  const { loadSettings } = await import("@/lib/settings-cache");
+  const map = await loadSettings();
+  if (map.get("pause_llm") === true) throw new Error("LLM jobs are paused (Settings → Kill switches).");
+  const limit = Number(map.get("monthly_budget_usd") ?? 0);
   if (limit > 0) {
     const monthStart = new Date();
     monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);

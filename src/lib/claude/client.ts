@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { settings } from "@/db/schema";
+import { settingString } from "@/lib/settings-cache";
 
 /**
  * The Claude key can come from the ANTHROPIC_API_KEY environment variable or from the Integrations
@@ -11,12 +9,7 @@ let cached: { key: string; client: Anthropic } | null = null;
 
 export async function getClaudeKey(): Promise<string> {
   if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
-  try {
-    const [row] = await db.select().from(settings).where(eq(settings.key, "claude_api_key"));
-    return typeof row?.value === "string" ? row.value : "";
-  } catch {
-    return "";
-  }
+  return settingString("claude_api_key");
 }
 
 export async function claude(): Promise<Anthropic> {

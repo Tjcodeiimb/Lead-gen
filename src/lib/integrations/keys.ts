@@ -1,6 +1,7 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { providerCalls, settings } from "@/db/schema";
+import { invalidateSettings, loadSettings, settingString } from "@/lib/settings-cache";
 
 /**
  * Third-party keys live in the settings table (single-user app) so they can be entered in the
@@ -75,14 +76,12 @@ export async function getKey(key: IntegrationKey): Promise<string> {
   const def = INTEGRATIONS.find((i) => i.key === key)!;
   const fromEnv = process.env[def.env];
   if (fromEnv) return fromEnv;
-  const [row] = await db.select().from(settings).where(eq(settings.key, key));
-  return typeof row?.value === "string" ? row.value : "";
+  return settingString(key);
 }
 
 export type KeyStatus = { set: boolean; fromEnv: boolean; last4: string };
 export async function getAllKeyStatus(): Promise<Record<IntegrationKey, KeyStatus>> {
-  const rows = await db.select().from(settings);
-  const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const map = Object.fromEntries(await loadSettings());
   const out = {} as Record<IntegrationKey, KeyStatus>;
   for (const i of INTEGRATIONS) {
     const v = process.env[i.env] || (typeof map[i.key] === "string" ? (map[i.key] as string) : "");
@@ -92,11 +91,11 @@ export async function getAllKeyStatus(): Promise<Record<IntegrationKey, KeyStatu
 }
 
 export async function getJsonSetting<T>(key: string): Promise<T | null> {
-  const [row] = await db.select().from(settings).where(eq(settings.key, key));
-  return (row?.value as T) ?? null;
+  return ((await loadSettings()).get(key) as T | undefined) ?? null;
 }
 export async function setJsonSetting(key: string, value: unknown) {
   await db.insert(settings).values({ key, value: value as object }).onConflictDoUpdate({ target: settings.key, set: { value: value as object } });
+  invalidateSettings();
 }
 
 /* ---------- usage meters and auto-switch ---------- */
@@ -131,11 +130,20 @@ export async function isExhausted(provider: string): Promise<boolean> {
 export async function markExhausted(provider: string) { await setJsonSetting(`exhausted:${provider}:${monthKey()}`, true); }
 
 export async function usageSummary() {
+  const [rows, map] = await Promise.all([
+    db.select({ provider: providerCalls.provider, n: sql<number>`count(*)` }).from(providerCalls)
+      .where(and(eq(providerCalls.charged, true), gte(providerCalls.createdAt, monthStart()))).groupBy(providerCalls.provider),
+    loadSettings(),
+  ]);
+  const used = new Map(rows.map((r) => [r.provider, Number(r.n)]));
   const out: Record<string, { used: number; limit: number | null; exhausted: boolean }> = {};
   for (const i of INTEGRATIONS) {
     const p = providerOf(i.key);
     if (p.startsWith("google")) continue;
-    out[p] = { used: await monthlyUsed(p), limit: await monthlyLimit(p), exhausted: await isExhausted(p) };
+    const override = map.get(`limit:${p}`);
+    const limit = typeof override === "number" ? override : ("freeMonthly" in i && i.freeMonthly ? i.freeMonthly : null);
+    const u = used.get(p) ?? 0;
+    out[p] = { used: u, limit, exhausted: map.get(`exhausted:${p}:${monthKey()}`) === true || (limit !== null && u >= limit) };
   }
   return out;
 }

@@ -3,10 +3,12 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { auditLog, settings } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { invalidateSettings } from "@/lib/settings-cache";
 
 export async function setSetting(key: string, value: unknown) {
   const user = await requireUser();
   await db.insert(settings).values({ key, value: value as object }).onConflictDoUpdate({ target: settings.key, set: { value: value as object } });
+  invalidateSettings();
   await db.insert(auditLog).values({ actor: `user:${user.email}`, action: "settings.set", details: { key, value } });
   revalidatePath("/settings"); revalidatePath("/");
 }
@@ -31,6 +33,7 @@ export async function saveIntegrationKey(key: string, value: string): Promise<{ 
   const v = value.trim();
   if (!v) return { ok: false, error: "Paste a key first" };
   await db.insert(settings).values({ key, value: v }).onConflictDoUpdate({ target: settings.key, set: { value: v } });
+  invalidateSettings();
   await db.insert(auditLog).values({ actor: `user:${user.email}`, action: "integration.key_saved", details: { key } });
   revalidatePath("/settings/integrations");
   return { ok: true };

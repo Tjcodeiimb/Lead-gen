@@ -1,6 +1,7 @@
 import { desc, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { agentRuns, auditLog, settings } from "@/db/schema";
+import { agentRuns, auditLog } from "@/db/schema";
+import { loadSettings } from "@/lib/settings-cache";
 import { PageHeader } from "@/components/app/page-header";
 import { isMock } from "@/lib/claude/client";
 import { Pill } from "@/components/ui/pill";
@@ -9,8 +10,7 @@ import { DemoDataButton, SettingsForm } from "./form";
 import { PasswordForm } from "./password-form";
 
 export default async function SettingsPage() {
-  const rows = await db.select().from(settings);
-  const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const map = Object.fromEntries(await loadSettings());
   const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
   const [spend] = await db.select({ usd: sql<string>`coalesce(sum(${agentRuns.costUsd}),0)`, n: sql<number>`count(*)` }).from(agentRuns).where(gte(agentRuns.createdAt, monthStart));
   const audit = await db.select().from(auditLog).orderBy(desc(auditLog.at)).limit(20);
