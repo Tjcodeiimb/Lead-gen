@@ -32,15 +32,14 @@ Until you add a Claude key, the app runs in **mock mode**: every "generate" butt
    - In both, replace `[YOUR-PASSWORD]` with the password from step 1.
 4. Open **Authentication → URL Configuration**. Set Site URL to `http://localhost:3000` and add `http://localhost:3000/auth/callback` to Redirect URLs. (Later, add your Vercel URL the same way.)
 5. In `.env.local`, set `ALLOWED_EMAILS` to your email. Only addresses on this list can sign in.
-6. Create the tables: `pnpm db:migrate`
-7. Optional demo data: `pnpm db:seed`
+6. The app creates its own tables the first time it starts, so there is nothing to run here.
 
 ## 3. Start the app
 
 ```
 pnpm dev
 ```
-Open http://localhost:3000 and sign in with the email and password you created in Supabase (Authentication → Users → Add user → Create new user, with **Auto Confirm User** ticked). Then change the password under Settings.
+Open http://localhost:3000. The first page load takes a little longer while the tables are created. Sign in with the email and password you created in Supabase (Authentication → Users → Add user → Create new user, with **Auto Confirm User** ticked). Then change the password under Settings.
 
 Things to try in mock mode (everything returns samples until you add a Claude key):
 - **Campaigns → New campaign**: pick a niche, where the companies are, which market they're entering, size and roles.

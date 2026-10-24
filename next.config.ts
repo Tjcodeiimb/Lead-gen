@@ -7,15 +7,16 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 
 const nextConfig: NextConfig = {
+  // Only inline values that exist at build time; otherwise leave process.env alone for runtime.
   env: {
-    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseKey,
+    ...(supabaseUrl ? { NEXT_PUBLIC_SUPABASE_URL: supabaseUrl } : {}),
+    ...(supabaseKey ? { NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseKey } : {}),
   },
   // Cache Components is a newer rendering mode. It is off here so that every
   // authenticated page renders dynamically without extra Suspense plumbing.
   cacheComponents: false,
   // Ship the /kb markdown files with the serverless functions that read them.
-  outputFileTracingIncludes: { "/**": ["./kb/**/*"] },
+  outputFileTracingIncludes: { "/**": ["./kb/**/*", "./drizzle/**/*"] },
   turbopack: {
     rules: {
       "*.css": {
